@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== Warna terang (default) ===== */
+:root {
+  --color-error-container: #ffdad6;
+  --color-primary-fixed: #dce1ff;
+  --color-on-surface: #131b2e;
+  --color-on-tertiary-fixed-variant: #005137;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-variant: #dae2fd;
+  --color-inverse-on-surface: #eef0ff;
+  --color-on-tertiary-container: #76eab6;
+  --color-surface: #faf8ff;
+  --color-on-primary-fixed-variant: #0039b5;
+  --color-secondary: #006a61;
+  --color-primary-container: #1d4ed8;
+  --color-on-surface-variant: #434655;
+  --color-on-secondary-container: #006f66;
+  --color-on-tertiary: #ffffff;
+  --color-surface-bright: #faf8ff;
+  --color-surface-dim: #d2d9f4;
+  --color-on-primary: #ffffff;
+  --color-on-primary-fixed: #001551;
+  --color-on-background: #131b2e;
+  --color-surface-container-high: #e2e7ff;
+  --color-tertiary: #004f35;
+  --color-on-secondary: #ffffff;
+  --color-primary: #0037b0;
+  --color-inverse-surface: #283044;
+  --color-on-tertiary-fixed: #002114;
+  --color-tertiary-fixed-dim: #68dba9;
+  --color-primary-fixed-dim: #b7c4ff;
+  --color-tertiary-container: #006948;
+  --color-tertiary-fixed: #85f8c4;
+  --color-background: #faf8ff;
+  --color-error: #ba1a1a;
+  --color-outline-variant: #c4c5d7;
+  --color-inverse-primary: #b7c4ff;
+  --color-secondary-fixed: #89f5e7;
+  --color-on-secondary-fixed: #00201d;
+  --color-outline: #747686;
+  --color-secondary-container: #86f2e4;
+  --color-surface-container: #eaedff;
+  --color-secondary-fixed-dim: #6bd8cb;
+  --color-on-secondary-fixed-variant: #005049;
+  --color-surface-container-low: #f2f3ff;
+  --color-on-error: #ffffff;
+  --color-surface-container-highest: #dae2fd;
+  --color-on-error-container: #93000a;
+  --color-on-primary-container: #cad3ff;
+  --color-surface-tint: #2151da;
+  --watermark-line: rgba(196, 197, 215, 0.15);
+  color-scheme: light;
+}
+
+/* ===== Warna gelap ===== */
+.dark {
+  --color-error-container: #260603;
+  --color-primary-fixed: #040b33;
+  --color-on-surface: #dddee0;
+  --color-on-tertiary-fixed-variant: #d2dbd8;
+  --color-surface-container-lowest: #171717;
+  --color-surface-variant: #13151b;
+  --color-inverse-on-surface: #12131c;
+  --color-on-tertiary-container: #495550;
+  --color-surface: #15121c;
+  --color-on-primary-fixed-variant: #9ba1ae;
+  --color-secondary: #9df7ef;
+  --color-primary-container: #5581ee;
+  --color-on-surface-variant: #b2b2b4;
+  --color-on-secondary-container: #c2cdcc;
+  --color-on-tertiary: #141414;
+  --color-surface-bright: #15121c;
+  --color-surface-dim: #191a1f;
+  --color-on-primary: #141414;
+  --color-on-primary-fixed: #d2d5db;
+  --color-on-background: #dddee0;
+  --color-surface-container-high: #12141c;
+  --color-tertiary: #b6f9e3;
+  --color-on-secondary: #141414;
+  --color-primary: #5c8bf2;
+  --color-inverse-surface: #c6c8cc;
+  --color-on-tertiary-fixed: #edf0ef;
+  --color-tertiary-fixed-dim: #2d8e64;
+  --color-primary-fixed-dim: #051043;
+  --color-tertiary-container: #9ef7db;
+  --color-tertiary-fixed: #107145;
+  --color-background: #15121c;
+  --color-error: #d95151;
+  --color-outline-variant: #303033;
+  --color-inverse-primary: #051043;
+  --color-secondary-fixed: #126e62;
+  --color-on-secondary-fixed: #edf1f0;
+  --color-outline: #808184;
+  --color-secondary-container: #157165;
+  --color-surface-container: #12141c;
+  --color-secondary-fixed-dim: #2f8c81;
+  --color-on-secondary-fixed-variant: #d3dbda;
+  --color-surface-container-low: #12131c;
+  --color-on-error: #141414;
+  --color-surface-container-highest: #13151b;
+  --color-on-error-container: #bdaeaf;
+  --color-on-primary-container: #18191d;
+  --color-surface-tint: #6f7994;
+  --watermark-line: rgba(200, 205, 230, 0.06);
+  color-scheme: dark;
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-on-surface;
+  }
+}
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
+  font-size: 20px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.watermark-grid {
+  background-size: 32px 32px;
+  background-image: linear-gradient(to right, var(--watermark-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--watermark-line) 1px, transparent 1px);
+}
