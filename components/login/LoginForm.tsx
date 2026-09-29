@@ -77,7 +77,7 @@ export default function LoginForm() {
             type="text"
             required
             autoComplete="username"
-            placeholder="operator@kemenag.go.id atau NIP"
+            placeholder="example@mail.com atau NIP"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
             className="w-full h-10 pl-10 pr-3 bg-surface-container-lowest text-on-surface placeholder:text-outline border border-outline-variant rounded hover:border-outline focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 font-body-md text-body-md transition-colors"

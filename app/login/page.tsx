@@ -3,13 +3,12 @@ import LoginForm from "@/components/login/LoginForm";
 import ThemeToggle from "@/components/ThemeToggle";
 
 export const metadata: Metadata = {
-  title: "Login - Sistem Pendataan Hajj & Umrah",
+  title: "Login - Sistem Pendataan Haji & Umrah",
 };
 
 export default function LoginPage() {
   return (
     <div className="bg-surface text-on-surface min-h-screen flex flex-col relative overflow-hidden">
-      {/* Watermark / dekorasi latar - overflow-hidden di parent mencegah ini menambah tinggi scroll */}
       <div className="absolute inset-0 watermark-grid pointer-events-none z-0" />
       <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-primary-fixed opacity-40 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-secondary-fixed opacity-30 blur-3xl pointer-events-none" />
@@ -27,10 +26,10 @@ export default function LoginPage() {
           </div>
           <div className="flex flex-col min-w-0">
             <span className="font-headline-sm text-[15px] sm:text-headline-sm font-bold text-primary tracking-tight leading-tight truncate">
-              Sistem Pendataan Hajj &amp; Umrah
+              Sistem Pendataan Haji &amp; Umrah
             </span>
             <span className="hidden sm:block font-label-sm text-label-sm text-on-surface-variant leading-none truncate">
-              Direktorat Jenderal Penyelenggaraan Haji dan Umrah
+              Kantor Kementerian Haji &amp; Umrah Kabupaten Magetan
             </span>
           </div>
         </div>
@@ -74,7 +73,7 @@ export default function LoginPage() {
               </div>
             </div>
             <h1 className="font-headline-md text-[20px] sm:text-headline-md text-on-surface font-bold tracking-tight">
-              Sistem Pendataan Hajj &amp; Umrah
+              Sistem Pendataan Haji &amp; Umrah
             </h1>
             <p className="font-body-sm text-body-sm text-on-surface-variant mt-1 max-w-xs">
               Silakan login untuk mengakses dashboard data
@@ -103,11 +102,11 @@ export default function LoginPage() {
         </div>
       </main>
 
-      {/* Footer - ringkas, satu baris, menempel di bawah */}
+      {/* Footer */}
       <footer className="w-full py-3 px-gutter-sm sm:px-gutter md:px-margin border-t border-outline-variant bg-surface z-10 shrink-0">
         <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-1 text-center">
           <span className="text-label-sm font-label-sm text-on-surface-variant">
-            © {new Date().getFullYear()} Kemenag RI - Sistem Pendataan Hajj &amp; Umrah
+            © {new Date().getFullYear()} Kemenhaj Magetan - Sistem Pendataan Haji &amp; Umrah
           </span>
           <span className="text-outline-variant">•</span>
           <a href="#bantuan" className="text-label-sm font-label-sm text-on-surface-variant hover:text-primary transition-colors duration-150">
