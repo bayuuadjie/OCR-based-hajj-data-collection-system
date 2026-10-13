@@ -4,20 +4,23 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
 import { pool } from "./db";
+import operatorsRouter from "./operators";
 import { createSessionToken, verifySessionToken, SESSION_COOKIE_NAME } from "../lib/session";
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN ?? "http://localhost:3000";
 
 app.use(express.json());
 app.use(cookieParser());
+
 app.use(
   cors({
-    origin: FRONTEND_ORIGIN,
+    origin: true,
     credentials: true,
   })
 );
+
+app.use("/api/operators", operatorsRouter);
 
 const isProd = process.env.NODE_ENV === "production";
 const cookieOptions = {
@@ -25,7 +28,7 @@ const cookieOptions = {
   secure: isProd,
   sameSite: "lax" as const,
   path: "/",
-  maxAge: 1000 * 60 * 60 * 8, // 8 jam, samakan dengan expiry token di lib/session.ts
+  maxAge: 1000 * 60 * 60 * 8, // 8 jam
 };
 
 app.get("/health", (_req, res) => {
@@ -96,6 +99,6 @@ app.get("/api/auth/me", async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`API server jalan di http://localhost:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`API server jalan di http://0.0.0.0:${PORT}`);
 });
