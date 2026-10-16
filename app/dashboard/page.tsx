@@ -15,7 +15,7 @@ type Jemaah = {
   noTelepon: string | null;
   tempatLahir: string | null;
   tanggalLahir: string | null;
-  statusHaji: string;
+  pernahHaji: string;
   pekerjaan: string | null;
   pendidikan: string | null;
   jenisKelamin: "L" | "P" | null;
@@ -27,19 +27,15 @@ type Jemaah = {
   tanggalPorsi: string | null;
 };
 
-type Filters = { q: string; status: string; kecamatan: string; from: string; to: string };
+type Filters = { q: string; pernahHaji: string; kecamatan: string; from: string; to: string };
 
-const emptyFilters: Filters = { q: "", status: "all", kecamatan: "", from: "", to: "" };
+const emptyFilters: Filters = { q: "", pernahHaji: "all", kecamatan: "", from: "", to: "" };
 
-const STATUS_OPTIONS = ["Terdaftar", "Porsi Aktif", "Reguler", "Khusus", "Lunas Tunda", "Batal"];
+const PERNAH_HAJI_OPTIONS = ["Sudah", "Belum"];
 
 const STATUS_STYLE: Record<string, string> = {
-  Reguler: "bg-tertiary-fixed text-on-tertiary-fixed border-tertiary-fixed-dim",
-  Khusus: "bg-secondary-container text-on-secondary-container border-secondary-fixed",
-  "Lunas Tunda": "bg-surface-container-highest text-primary border-outline-variant",
-  "Porsi Aktif": "bg-primary-fixed text-on-primary-fixed border-primary-fixed-dim",
-  Terdaftar: "bg-surface-container text-on-surface-variant border-outline-variant",
-  Batal: "bg-error-container text-on-error-container border-error/30",
+  Sudah: "bg-tertiary-fixed text-on-tertiary-fixed border-tertiary-fixed-dim",
+  Belum: "bg-surface-container-highest text-on-surface-variant border-outline-variant",
 };
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -62,6 +58,17 @@ function pageList(current: number, total: number): (number | "...")[] {
   return result;
 }
 
+/** Parameter filter untuk /api/jemaah dan /api/jemaah/export */
+function filterParams(f: Filters) {
+  const params = new URLSearchParams();
+  if (f.q) params.set("q", f.q);
+  if (f.pernahHaji !== "all") params.set("pernahHaji", f.pernahHaji);
+  if (f.kecamatan) params.set("kecamatan", f.kecamatan);
+  if (f.from) params.set("from", f.from);
+  if (f.to) params.set("to", f.to);
+  return params;
+}
+
 const dash = (v: string | null | undefined) => (v && v.trim() ? v : "-");
 
 const fieldClass =
@@ -73,7 +80,7 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span
       className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap ${
-        STATUS_STYLE[status] ?? STATUS_STYLE.Terdaftar
+        STATUS_STYLE[status] ?? STATUS_STYLE.Belum
       }`}
     >
       {status}
@@ -126,6 +133,7 @@ function DashboardContent() {
 
   const [kecamatanOptions, setKecamatanOptions] = useState<string[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   // Sinkronkan pencarian dari kolom cari di Topbar (?q=...)
   useEffect(() => {
@@ -136,12 +144,9 @@ function DashboardContent() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-    if (applied.q) params.set("q", applied.q);
-    if (applied.status !== "all") params.set("status", applied.status);
-    if (applied.kecamatan) params.set("kecamatan", applied.kecamatan);
-    if (applied.from) params.set("from", applied.from);
-    if (applied.to) params.set("to", applied.to);
+    const params = filterParams(applied);
+    params.set("page", String(page));
+    params.set("limit", String(limit));
 
     try {
       const res = await api<{ data: Jemaah[]; total: number }>(`/api/jemaah?${params}`);
@@ -180,6 +185,32 @@ function DashboardContent() {
     setPage(1);
   }
 
+  async function handleExport() {
+    setExporting(true);
+    try {
+      // Ekspor semua data yang cocok dengan filter yang sedang diterapkan (bukan hanya halaman ini)
+      const res = await fetch(`${API_URL}/api/jemaah/export?${filterParams(applied)}`, {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message ?? "Gagal mengekspor data.");
+      }
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `data-jemaah-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Gagal mengekspor data.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function handleDelete(j: Jemaah) {
     if (!window.confirm(`Hapus data "${j.namaLengkap}"? Tindakan ini tidak bisa dibatalkan.`)) return;
     try {
@@ -198,7 +229,7 @@ function DashboardContent() {
 
   // Jumlah filter lanjutan yang aktif (untuk badge di tombol "Filter" mobile)
   const activeAdvanced = [
-    applied.status !== "all",
+    applied.pernahHaji !== "all",
     applied.kecamatan !== "",
     applied.from !== "",
     applied.to !== "",
@@ -220,12 +251,14 @@ function DashboardContent() {
         </div>
         <div className="grid grid-cols-2 sm:flex items-center gap-space-sm">
           <button
-            disabled
-            title="Segera hadir"
-            className="h-10 px-space-base rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-label-lg text-label-lg flex items-center justify-center gap-space-xs opacity-50 cursor-not-allowed"
+            type="button"
+            onClick={handleExport}
+            disabled={exporting || total === 0}
+            title="Unduh data yang sedang ditampilkan (sesuai filter) sebagai Excel"
+            className="h-10 px-space-base rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-label-lg text-label-lg flex items-center justify-center gap-space-xs hover:bg-surface-container hover:border-outline transition-colors duration-150 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="material-symbols-outlined text-tertiary">table_view</span>
-            <span>Export</span>
+            <span>{exporting ? "Mengekspor..." : "Export Excel"}</span>
           </button>
           <Link
             href="/dashboard/input"
@@ -282,16 +315,16 @@ function DashboardContent() {
           <div className={showFilters ? "contents" : "hidden md:contents"}>
             <div className="lg:col-span-3 flex flex-col gap-1">
               <label htmlFor="f-status" className={labelClass}>
-                Status Haji
+                Pernah Haji
               </label>
               <select
                 id="f-status"
                 className={`${fieldClass} cursor-pointer`}
-                value={draft.status}
-                onChange={(e) => setDraft({ ...draft, status: e.target.value })}
+                value={draft.pernahHaji}
+                onChange={(e) => setDraft({ ...draft, pernahHaji: e.target.value })}
               >
-                <option value="all">Semua Status</option>
-                {STATUS_OPTIONS.map((s) => (
+                <option value="all">Semua</option>
+                {PERNAH_HAJI_OPTIONS.map((s) => (
                   <option key={s} value={s}>
                     {s}
                   </option>
@@ -400,7 +433,7 @@ function DashboardContent() {
                       {dash(j.binBinti)}
                     </p>
                   </div>
-                  <StatusBadge status={j.statusHaji} />
+                  <StatusBadge status={j.pernahHaji} />
                 </div>
 
                 <dl className="grid grid-cols-2 gap-x-3 gap-y-2">
@@ -457,7 +490,7 @@ function DashboardContent() {
                 <th className="px-3.5 py-2 font-semibold">5. No. Telepon</th>
                 <th className="px-3.5 py-2 font-semibold">6. Tempat Lahir</th>
                 <th className="px-3.5 py-2 font-semibold">7. Tgl Lahir</th>
-                <th className="px-3.5 py-2 font-semibold">8. Status Haji</th>
+                <th className="px-3.5 py-2 font-semibold">8. Pernah Haji</th>
                 <th className="px-3.5 py-2 font-semibold">9. Pekerjaan</th>
                 <th className="px-3.5 py-2 font-semibold">10. Pendidikan</th>
                 <th className="px-3.5 py-2 font-semibold text-center">11. JK</th>
@@ -501,7 +534,7 @@ function DashboardContent() {
                     <td className="px-3.5 py-2 text-on-surface">{dash(j.tempatLahir)}</td>
                     <td className="px-3.5 py-2 text-on-surface-variant">{dash(j.tanggalLahir)}</td>
                     <td className="px-3.5 py-2">
-                      <StatusBadge status={j.statusHaji} />
+                      <StatusBadge status={j.pernahHaji} />
                     </td>
                     <td className="px-3.5 py-2 text-on-surface-variant">{dash(j.pekerjaan)}</td>
                     <td className="px-3.5 py-2 text-on-surface-variant">{dash(j.pendidikan)}</td>

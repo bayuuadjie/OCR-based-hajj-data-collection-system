@@ -5,6 +5,8 @@ import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
 import { pool } from "./db";
 import operatorsRouter from "./operators";
+import jemaahRouter from "./jemaah";
+import ocrRouter from "./ocr";
 import { createSessionToken, verifySessionToken, SESSION_COOKIE_NAME } from "../lib/session";
 
 const app = express();
@@ -12,6 +14,7 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 
 app.use(express.json());
 app.use(cookieParser());
+app.use("/api/ocr", ocrRouter);
 
 app.use(
   cors({
@@ -21,6 +24,7 @@ app.use(
 );
 
 app.use("/api/operators", operatorsRouter);
+app.use("/api/jemaah", jemaahRouter);
 
 const isProd = process.env.NODE_ENV === "production";
 const cookieOptions = {
