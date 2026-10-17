@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { pool } from "./db";
 import operatorsRouter from "./operators";
 import jemaahRouter from "./jemaah";
+import laporanRouter from "./laporan";
 import ocrRouter from "./ocr";
 import { createSessionToken, verifySessionToken, SESSION_COOKIE_NAME } from "../lib/session";
 
@@ -15,6 +16,7 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 app.use(express.json());
 app.use(cookieParser());
 app.use("/api/ocr", ocrRouter);
+app.use("/api/laporan", laporanRouter);
 
 app.use(
   cors({
