@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DragEvent, useCallback, useEffect, useRef, useState } from "react";
+import KecamatanField, { normalizeKecamatan } from "@/components/dashboard/KecamatanField";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -17,11 +18,10 @@ type FormState = Record<FieldKey, string>;
 type FieldDef = {
   key: FieldKey;
   label: string;
-  kind?: "text" | "date" | "tel" | "select" | "textarea";
+  kind?: "text" | "date" | "tel" | "select" | "textarea" | "combo";
   options?: { value: string; label: string }[];
   required?: boolean;
   wide?: boolean;
-  list?: string;
   inputMode?: "numeric" | "tel";
 };
 
@@ -41,7 +41,7 @@ const SHEETS: Sheet[] = [
       },
       { key: "tempatLahir", label: "Tempat Lahir" },
       { key: "tanggalLahir", label: "Tanggal Lahir", kind: "date" },
-      { key: "kecamatan", label: "Kecamatan", list: "kecamatan-list" },
+      { key: "kecamatan", label: "Kecamatan", kind: "combo" },
       { key: "noTelepon", label: "Nomor HP", kind: "tel", inputMode: "tel" },
       { key: "noPorsi", label: "Nomor Porsi", required: true, inputMode: "numeric" },
       { key: "tanggalPorsi", label: "Tanggal Porsi", kind: "date" },
@@ -200,7 +200,7 @@ export default function InputDataPage() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...rest, binBinti }),
+        body: JSON.stringify({ ...rest, kecamatan: normalizeKecamatan(rest.kecamatan), binBinti }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message ?? "Gagal menyimpan.");
@@ -404,6 +404,14 @@ export default function InputDataPage() {
                           <option key={o.value} value={o.value}>{o.label}</option>
                         ))}
                       </select>
+                    ) : def.kind === "combo" ? (
+                      <KecamatanField
+                        id={`f-${def.key}`}
+                        value={value}
+                        options={kecamatanOptions}
+                        onChange={(v) => setField(def.key, v)}
+                        className={cls}
+                      />
                     ) : def.kind === "textarea" ? (
                       <textarea id={`f-${def.key}`} rows={3} className={`${cls} h-auto py-2`} value={value} onChange={(e) => setField(def.key, e.target.value)} />
                     ) : (
@@ -411,7 +419,6 @@ export default function InputDataPage() {
                         id={`f-${def.key}`}
                         type={def.kind === "date" ? "date" : def.kind === "tel" ? "tel" : "text"}
                         inputMode={def.inputMode}
-                        list={def.list}
                         className={cls}
                         value={value}
                         onChange={(e) => setField(def.key, e.target.value)}
@@ -421,11 +428,6 @@ export default function InputDataPage() {
                 );
               })}
             </div>
-            <datalist id="kecamatan-list">
-              {kecamatanOptions.map((k) => (
-                <option key={k} value={k} />
-              ))}
-            </datalist>
           </section>
         </div>
       ) : (

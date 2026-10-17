@@ -25,7 +25,7 @@ Cek: buka http://127.0.0.1:8001/health, harus muncul `{"ok":true,...,"lang":"ind
 ## .env (di root project, dipakai Express dan layanan ini)
 
 ```
-OCR_TOKEN="isi-string-acak-panjang"   # harus sama untuk Express dan Python
+OCR_TOKEN=""
 # OCR_URL="http://127.0.0.1:8001"     # opsional, ini sudah default
 ```
 
