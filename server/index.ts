@@ -7,6 +7,7 @@ import { pool } from "./db";
 import operatorsRouter from "./operators";
 import jemaahRouter from "./jemaah";
 import laporanRouter from "./laporan";
+import accountRouter from "./account";
 import ocrRouter from "./ocr";
 import { createSessionToken, verifySessionToken, SESSION_COOKIE_NAME } from "../lib/session";
 
@@ -17,6 +18,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use("/api/ocr", ocrRouter);
 app.use("/api/laporan", laporanRouter);
+app.use("/api/account", accountRouter);
 
 app.use(
   cors({

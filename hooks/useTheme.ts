@@ -8,7 +8,14 @@ export function useTheme() {
   const [isDark, setIsDark] = useState<boolean | null>(null);
 
   useEffect(() => {
-    setIsDark(document.documentElement.classList.contains("dark"));
+    const html = document.documentElement;
+    const sync = () => setIsDark(html.classList.contains("dark"));
+    sync();
+
+    // Ikut berubah kalau tema diganti dari tempat lain (mis. halaman Pengaturan)
+    const observer = new MutationObserver(sync);
+    observer.observe(html, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
   }, []);
 
   function toggle() {
