@@ -74,6 +74,7 @@ app.post("/api/auth/login", async (req, res) => {
     const token = await createSessionToken({
       sub: operator.id,
       username: operator.username,
+      name: operator.name,
       role: operator.role,
     });
 

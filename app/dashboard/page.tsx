@@ -49,7 +49,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 function pageList(current: number, total: number): (number | "...")[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   const pages = new Set([1, total, current - 1, current, current + 1]);
-  const sorted = [...pages].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+  const sorted = Array.from(pages).filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
   const result: (number | "...")[] = [];
   sorted.forEach((p, i) => {
     if (i > 0 && p - sorted[i - 1] > 1) result.push("...");

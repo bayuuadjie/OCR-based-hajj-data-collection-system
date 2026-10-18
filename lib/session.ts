@@ -14,6 +14,7 @@ const secret = new TextEncoder().encode(secretEnv ?? "dev-only-insecure-secret-c
 export type SessionPayload = {
   sub: string; // operator id
   username: string;
+  name: string;
   role: "ADMIN" | "OPERATOR";
 };
 

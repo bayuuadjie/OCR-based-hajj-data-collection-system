@@ -195,12 +195,14 @@ export default function InputDataPage() {
     setSaving(true);
     setSaveError(null);
     try {
-      const { namaAyah: _ignored, ...rest } = form;
+      const payload = { ...form };
+      delete (payload as Partial<FormState>).namaAyah;
+
       const res = await fetch(`${API_URL}/api/jemaah`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...rest, kecamatan: normalizeKecamatan(rest.kecamatan), binBinti }),
+        body: JSON.stringify({ ...payload, kecamatan: normalizeKecamatan(payload.kecamatan), binBinti }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message ?? "Gagal menyimpan.");
