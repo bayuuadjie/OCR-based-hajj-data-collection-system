@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DragEvent, useCallback, useEffect, useRef, useState } from "react";
 import KecamatanField, { normalizeKecamatan } from "@/components/dashboard/KecamatanField";
+import DateField, { normalizeDate, toIso } from "@/components/dashboard/DateField";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -25,7 +26,7 @@ type FieldDef = {
   inputMode?: "numeric" | "tel";
 };
 
-type Sheet = { page: 1 | 2 | 3; title: string; subtitle: string; fields: FieldDef[] };
+type Sheet = { page: 1 | 2 | 3; title: string; subtitle: string; note?: string; fields: FieldDef[] };
 
 const SHEETS: Sheet[] = [
   {
@@ -66,6 +67,7 @@ const SHEETS: Sheet[] = [
     page: 3,
     title: "Lembar 3",
     subtitle: "Alamat, pendidikan, dan pekerjaan",
+    note: "OCR hanya membaca alamat (gabungan RT/RW dan Desa/Kelurahan). Pendidikan dan pekerjaan diisi manual dari KK.",
     fields: [
       { key: "alamat", label: "Alamat", kind: "textarea", required: true, wide: true },
       { key: "pendidikan", label: "Pendidikan" },
@@ -99,10 +101,6 @@ const inputClass =
 function displayValue(def: FieldDef, value: string): string {
   if (!value) return "-";
   if (def.kind === "select") return def.options?.find((o) => o.value === value)?.label ?? value;
-  if (def.kind === "date") {
-    const [y, m, d] = value.split("-");
-    return y && m && d ? `${d}/${m}/${y}` : value;
-  }
   return value;
 }
 
@@ -190,19 +188,26 @@ export default function InputDataPage() {
   // ---- Validasi & simpan ----
   const binBinti = composeBinBinti(form.namaAyah, form.jenisKelamin);
   const missingRequired = ALL_FIELDS.filter((f) => f.required && !form[f.key].trim()).map((f) => f.label);
+  const invalidDates = ALL_FIELDS.filter(
+    (f) => f.kind === "date" && form[f.key].trim() !== "" && normalizeDate(form[f.key]) === null
+  ).map((f) => f.label);
 
   async function handleSave() {
     setSaving(true);
     setSaveError(null);
     try {
-      const payload = { ...form };
-      delete (payload as Partial<FormState>).namaAyah;
-
+      const { namaAyah: _ignored, ...rest } = form;
+      // Server menerima tanggal ISO (yyyy-mm-dd); di layar tetap dd/mm/yyyy
+      const dates = {
+        tanggalLahir: toIso(rest.tanggalLahir) ?? "",
+        tanggalPorsi: toIso(rest.tanggalPorsi) ?? "",
+        tanggalValidasi: toIso(rest.tanggalValidasi) ?? "",
+      };
       const res = await fetch(`${API_URL}/api/jemaah`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...payload, kecamatan: normalizeKecamatan(payload.kecamatan), binBinti }),
+        body: JSON.stringify({ ...rest, ...dates, kecamatan: normalizeKecamatan(rest.kecamatan), binBinti }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message ?? "Gagal menyimpan.");
@@ -386,6 +391,12 @@ export default function InputDataPage() {
             <p className="text-label-md font-label-md text-on-surface-variant mb-space-base">
               Hasil bacaan bisa diubah. <span className="text-error">*</span> wajib diisi.
             </p>
+            {sheet.note && (
+              <p className="mb-space-base p-2.5 rounded bg-surface-container text-label-md font-label-md text-on-surface-variant flex gap-2">
+                <span className="material-symbols-outlined text-[18px] shrink-0">info</span>
+                {sheet.note}
+              </p>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-base">
               {sheet.fields.map((def) => {
@@ -406,6 +417,8 @@ export default function InputDataPage() {
                           <option key={o.value} value={o.value}>{o.label}</option>
                         ))}
                       </select>
+                    ) : def.kind === "date" ? (
+                      <DateField id={`f-${def.key}`} value={value} onChange={(v) => setField(def.key, v)} className={cls} />
                     ) : def.kind === "combo" ? (
                       <KecamatanField
                         id={`f-${def.key}`}
@@ -419,7 +432,7 @@ export default function InputDataPage() {
                     ) : (
                       <input
                         id={`f-${def.key}`}
-                        type={def.kind === "date" ? "date" : def.kind === "tel" ? "tel" : "text"}
+                        type={def.kind === "tel" ? "tel" : "text"}
                         inputMode={def.inputMode}
                         className={cls}
                         value={value}
@@ -470,6 +483,11 @@ export default function InputDataPage() {
               Belum bisa disimpan. Lengkapi dulu: {missingRequired.join(", ")}.
             </div>
           )}
+          {invalidDates.length > 0 && (
+            <div role="alert" className="p-3 rounded bg-error-container/60 border border-error/30 text-on-error-container text-label-md font-label-md">
+              Tanggal tidak valid: {invalidDates.join(", ")}. Tulis seperti 07/06/2022.
+            </div>
+          )}
           {saveError && (
             <div role="alert" className="p-3 rounded bg-error-container/60 border border-error/30 text-on-error-container text-label-md font-label-md">
               {saveError}
@@ -500,7 +518,7 @@ export default function InputDataPage() {
           <button
             type="button"
             onClick={handleSave}
-            disabled={saving || missingRequired.length > 0}
+            disabled={saving || missingRequired.length > 0 || invalidDates.length > 0}
             className="h-10 px-space-base rounded-lg bg-primary-container text-on-primary hover:bg-primary text-label-lg font-label-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? "Menyimpan..." : "Simpan Data"}

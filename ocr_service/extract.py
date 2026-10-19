@@ -56,16 +56,54 @@ def _valid_iso(y: int, m: int, d: int) -> str:
         return ""
 
 
-def parse_date(value: str) -> str:
+_MONTH_NAMES = (
+    "januari", "februari", "pebruari", "maret", "april", "mei", "juni",
+    "juli", "agustus", "september", "oktober", "november", "nopember", "desember",
+)
+_NUMFIX = str.maketrans({"O": "0", "o": "0", "I": "1", "l": "1", "|": "1"})
+
+
+def _month_of(token: str) -> int | None:
+    """Nomor bulan dari tulisan seperti "Juni", "Jun", "Agt", atau salah baca "Agusuts"."""
+    t = token.lower().strip(".")
+    if t in MONTHS:
+        return MONTHS[t]
+    if len(t) < 4:  # singkatan 3 huruf harus persis
+        return None
+    best: dict[int, float] = {}
+    for name in _MONTH_NAMES:
+        best[MONTHS[name]] = max(best.get(MONTHS[name], 0), fuzz.ratio(t, name))
+    ranked = sorted(best.items(), key=lambda kv: kv[1], reverse=True)
+    # Harus cukup mirip DAN jelas lebih mirip satu bulan dibanding bulan lain (Juni vs Juli)
+    if ranked[0][1] >= 75 and ranked[0][1] > ranked[1][1]:
+        return ranked[0][0]
+    return None
+
+
+def _year_of(text: str) -> int:
+    year = int(text.translate(_NUMFIX))
+    if len(text) == 2:
+        year += 2000 if year <= 30 else 1900
+    return year
+
+
+def _parse_iso(value: str) -> str:
     """Kembalikan YYYY-MM-DD, atau "" kalau tidak bisa dibaca."""
     s = clean_text(value)
     if not s:
         return ""
 
-    # 7 Juni 1999 / 07 JUN 1999
-    m = re.search(r"(\d{1,2})\s*[-/. ]?\s*([A-Za-z]{3,10})\.?\s*[-/. ]?\s*(\d{4})", s)
-    if m and m.group(2).lower() in MONTHS:
-        return _valid_iso(int(m.group(3)), MONTHS[m.group(2).lower()], int(m.group(1)))
+    # Dengan nama bulan: "07 Juni 2022", "7-Jun-22", "07Juni2022", "O7 Juni 2O22"
+    for m in re.finditer(r"[A-Za-z]{3,10}", s):
+        month = _month_of(m.group())
+        if month is None:
+            continue
+        day = re.search(r"(?<![A-Za-z])([0-9OoIl|]{1,2})\W*$", s[: m.start()])
+        year = re.match(r"\W*([0-9OoIl|]{4}|[0-9OoIl|]{2})(?![A-Za-z0-9])", s[m.end():])
+        if day and year:
+            iso = _valid_iso(_year_of(year.group(1)), month, int(day.group(1).translate(_NUMFIX)))
+            if iso:
+                return iso
 
     # Angka: buang salah baca huruf->angka (O->0, l->1) lalu cari pola tanggal
     t = s.translate(_DIGIT_FIX)
@@ -92,6 +130,15 @@ def parse_date(value: str) -> str:
     return ""
 
 
+def parse_date(value: str) -> str:
+    """Tanggal dalam bentuk apa pun -> dd/mm/yyyy (mis. "07 Juni 2022" -> "07/06/2022"), atau ""."""
+    iso = _parse_iso(value)
+    if not iso:
+        return ""
+    y, m, d = iso.split("-")
+    return f"{d}/{m}/{y}"
+
+
 def norm_gender(value: str) -> str:
     v = re.sub(r"[^a-z]", "", (value or "").lower())
     if v in {"l", "lk", "laki", "lakilaki", "pria", "male", "m"} or v.startswith("laki"):
@@ -110,17 +157,13 @@ def norm_pernah_haji(value: str) -> str:
     return ""
 
 
-def norm_alamat(value: str) -> str:
-    """Perbaiki salah baca O/l di dalam angka, mis. "RT O4/RW O2" -> "RT 04/RW 02"."""
-    v = clean_text(value)
-    v = re.sub(r"(?<=\d)[Oo]|[Oo](?=\d)", "0", v)
-    return re.sub(r"(?<=\d)[lI|]|[lI|](?=\d)", "1", v)
-
-
-def norm_pendidikan(value: str) -> str:
-    """Perbaiki "Sl"/"$1"/"SI" di awal menjadi "S1" (jenjang pendidikan)."""
-    v = clean_text(value)
-    return re.sub(r"^[S$5s]\s?[lI|!1](?=\s|$)", "S1", v)
+def norm_rtrw(value: str) -> str:
+    """"004/002" / "RT 04 / RW 02" -> "RT 004/RW 002" (salah baca O/l di angka diperbaiki)."""
+    nums = re.findall(r"(?<![A-Za-z])[0-9OoIl|]{1,4}(?![A-Za-z])", value or "")
+    nums = [n.translate(_NUMFIX) for n in nums]
+    if len(nums) >= 2:
+        return f"RT {nums[0]}/RW {nums[1]}"
+    return clean_text(value)
 
 
 def norm_kecamatan(value: str) -> str:
@@ -157,7 +200,6 @@ class Spec:
     key: str  # sama dengan nama kolom di form frontend (camelCase)
     aliases: tuple[str, ...]  # tulisan label yang mungkin muncul di formulir
     normalize: Callable[[str], str] = clean_text
-    multiline: bool = False  # isi bisa lebih dari satu baris (alamat)
     optional: bool = False  # tidak dianggap "tidak terbaca" kalau kosong
 
 
@@ -172,7 +214,7 @@ PAGES: dict[int, list[Spec]] = {
         Spec("kecamatan", ("kecamatan", "kec"), norm_kecamatan),
         Spec("noTelepon", ("nomor hp", "no hp", "no. hp", "nomor telepon", "no telepon", "no telp", "nomor handphone", "no handphone", "nomor wa", "telepon", "hp"), norm_phone),
         Spec("noPorsi", ("nomor porsi", "no porsi", "no. porsi", "porsi"), digits_only),
-        Spec("tanggalPorsi", ("tanggal porsi", "tgl porsi", "tgl. porsi"), parse_date),
+        Spec("tanggalPorsi", ("tanggal set", "tanggal setor", "tgl set", "tgl setor", "tanggal porsi", "tgl porsi"), parse_date),
         Spec("namaBank", ("nama bank", "bank"), norm_bank),
         Spec("noRekening", ("nomor rekening", "no rekening", "no. rekening", "no rek", "rekening"), digits_only),
     ],
@@ -182,11 +224,12 @@ PAGES: dict[int, list[Spec]] = {
         Spec("noValidasi", ("nomor validasi", "no validasi", "no. validasi", "validasi"), digits_only),
         Spec("tanggalValidasi", ("tanggal validasi", "tgl validasi", "tgl. validasi"), parse_date),
     ],
-    # Lembar 3: alamat, pendidikan, pekerjaan
+    # Lembar 3: alamat = gabungan label "RT/RW" dan "Desa/Kelurahan".
+    # (Pendidikan & pekerjaan sengaja tidak di-OCR: datanya dari KK dan isinya beberapa orang.)
+    # Kunci berawalan "_" hanya bahan; hasil akhirnya satu kolom "alamat".
     3: [
-        Spec("alamat", ("alamat lengkap", "alamat rumah", "alamat tinggal", "alamat"), norm_alamat, multiline=True),
-        Spec("pendidikan", ("pendidikan terakhir", "pendidikan"), norm_pendidikan),
-        Spec("pekerjaan", ("jenis pekerjaan", "pekerjaan")),
+        Spec("_rtrw", ("rt/rw", "rt / rw", "rt rw", "rtrw"), norm_rtrw),
+        Spec("_desa", ("desa/kelurahan", "desa / kelurahan", "desa kelurahan", "kelurahan/desa", "kel/desa", "kelurahan", "desa")),
     ],
 }
 
@@ -246,11 +289,16 @@ def _best_match(line: str, specs: list[tuple[str, tuple[str, ...]]]) -> _Match |
     return best
 
 
+def output_keys(page: int) -> list[str]:
+    """Kolom hasil akhir untuk lembar ini (tanpa kunci bahan berawalan "_")."""
+    keys = [s.key for s in PAGES[page] if not s.key.startswith("_")]
+    return keys + ["alamat"] if page == 3 else keys
+
+
 def extract_fields(page: int, lines: list[str]) -> dict[str, str]:
     """Kembalikan {namaKolom: nilai}. Kolom yang tidak ketemu bernilai ""."""
     specs = PAGES[page]
     by_key = {s.key: s for s in specs}
-    result = {s.key: "" for s in specs}
 
     lookup = [(s.key, s.aliases) for s in specs]
     if page == 1:
@@ -275,36 +323,27 @@ def extract_fields(page: int, lines: list[str]) -> dict[str, str]:
         tokens = value.split()
         if len(tokens) > 1 and tokens[0] in {"1", "|", "!", ".", ",", "-", "_", "~"}:
             value = " ".join(tokens[1:])  # titik dua yang salah baca
-        spec = by_key.get(match.key)
 
-        # Isi ada di baris berikutnya (label berdiri sendiri)
+        # Isi ada di baris berikutnya (label berdiri sendiri, mis. "Tanggal Set." lalu tanggalnya di bawah)
         if not value and i + 1 < len(clean_lines) and not is_label_line(clean_lines[i + 1]):
             value = clean_lines[i + 1]
             used.add(i + 1)
 
-        # Alamat: sambung baris-baris berikutnya sampai ketemu label lain
-        if spec and spec.multiline:
-            parts = [value] if value else []
-            j = i + 1
-            while j < len(clean_lines) and len(parts) < 4 and not is_label_line(clean_lines[j]):
-                if j not in used:
-                    parts.append(clean_lines[j])
-                    used.add(j)
-                j += 1
-            value = " ".join(parts)
-
         raw[match.key] = value
 
-    for key, value in raw.items():
-        if key in by_key:
-            result[key] = by_key[key].normalize(value)
+    normalized = {key: by_key[key].normalize(value) for key, value in raw.items() if key in by_key}
+    result = {key: normalized.get(key, "") for key in output_keys(page)}
+
+    if page == 3:
+        parts = [normalized.get("_rtrw", ""), normalized.get("_desa", "")]
+        result["alamat"] = ", ".join(p for p in parts if p)
 
     # Pecah "Tempat/Tanggal Lahir" kalau kolom terpisahnya kosong
     ttl = raw.get("_ttl", "")
     if ttl and page == 1:
-        iso = parse_date(ttl)
-        if iso and not result["tanggalLahir"]:
-            result["tanggalLahir"] = iso
+        tgl = parse_date(ttl)
+        if tgl and not result["tanggalLahir"]:
+            result["tanggalLahir"] = tgl
         if not result["tempatLahir"]:
             place = re.split(r"[,;]|\s\d", ttl, maxsplit=1)[0]
             result["tempatLahir"] = clean_text(place)
@@ -314,4 +353,5 @@ def extract_fields(page: int, lines: list[str]) -> dict[str, str]:
 
 def expected_missing(page: int, fields: dict[str, str]) -> list[str]:
     """Kolom wajib baca yang kosong (untuk ditandai di layar)."""
-    return [s.key for s in PAGES[page] if not s.optional and not fields.get(s.key)]
+    optional = {s.key for s in PAGES[page] if s.optional}
+    return [k for k in output_keys(page) if k not in optional and not fields.get(k)]
