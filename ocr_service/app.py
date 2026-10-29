@@ -99,9 +99,11 @@ def estimate_skew(gray: Image.Image) -> float:
 
 
 def preprocess(img: Image.Image) -> Image.Image:
-    img = ImageOps.exif_transpose(img)  # foto HP sering tersimpan miring
+    transposed = ImageOps.exif_transpose(img)  # foto HP sering tersimpan miring
+    if isinstance(transposed, Image.Image):
+        img = transposed
     if img.mode in ("RGBA", "LA", "P"):
-        bg = Image.new("RGB", img.size, "white")
+        bg = Image.new("RGB", img.size, 0xFFFFFF)
         bg.paste(img.convert("RGBA"), mask=img.convert("RGBA").split()[-1])
         img = bg
     img = img.convert("L")
