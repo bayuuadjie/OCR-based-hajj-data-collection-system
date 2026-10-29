@@ -12,14 +12,22 @@ type SeedAccount = {
 };
 
 const accounts: SeedAccount[] = [
-//   {
-//     username: "",
-//     password: "",
-//     name: "",
-//     role: "",
-//     email: "",
-//   },
+  {
+    username: "",
+    password: "",
+    name: "",
+    role: "ADMIN",
+    email: "",
+  },
+  {
+    username: "",
+    password: "",
+    name: "",
+    role: "OPERATOR",
+    email: "",
+  },
 ];
+
 
 async function main() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });

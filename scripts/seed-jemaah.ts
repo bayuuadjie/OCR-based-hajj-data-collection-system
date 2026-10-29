@@ -1,8 +1,3 @@
-/**
- * Isi tabel jemaah dengan 8 data contoh (fiktif) dari mockup.
- * Jalankan: npm run db:seed-jemaah
- * Aman dijalankan berkali-kali (data dengan No. Porsi yang sama dilewati).
- */
 import "dotenv/config";
 import { randomUUID } from "crypto";
 import { Pool } from "pg";

@@ -138,6 +138,61 @@ router.get("/kecamatan", async (_req, res) => {
   }
 });
 
+// Nilai yang sudah ada di data, untuk dropdown + autocomplete di form Input Data.
+// Penulisan yang hanya beda huruf besar/kecil atau awalan ("CIMB Niaga" vs "Bank CIMB Niaga")
+// digabung jadi satu pilihan; yang ditampilkan adalah penulisan yang paling sering dipakai.
+const OPTION_COLUMNS = {
+  kecamatan: { column: "kecamatan", prefix: /^(kecamatan|kec) / },
+  namaBank: { column: "nama_bank", prefix: /^bank / },
+  pendidikan: { column: "pendidikan", prefix: null },
+  pekerjaan: { column: "pekerjaan", prefix: null },
+} as const;
+
+function mergeSpellings(rows: { value: string; total: number }[], prefix: RegExp | null) {
+  const canon = (v: string) => {
+    const c = v.toLowerCase().replace(/[.,]/g, " ").replace(/\s+/g, " ").trim();
+    return prefix ? c.replace(prefix, "") : c;
+  };
+  const groups = new Map<string, { best: { value: string; total: number }; total: number }>();
+  for (const row of rows) {
+    const key = canon(row.value);
+    const g = groups.get(key);
+    if (!g) {
+      groups.set(key, { best: row, total: row.total });
+      continue;
+    }
+    g.total += row.total;
+    const better =
+      row.total > g.best.total ||
+      (row.total === g.best.total && g.best.value === g.best.value.toUpperCase() && row.value !== row.value.toUpperCase());
+    if (better) g.best = row;
+  }
+  return [...groups.values()]
+    .sort((a, b) => b.total - a.total || a.best.value.localeCompare(b.best.value, "id"))
+    .slice(0, 300)
+    .map((g) => g.best.value);
+}
+
+router.get("/options", async (_req, res) => {
+  try {
+    const entries = await Promise.all(
+      Object.entries(OPTION_COLUMNS).map(async ([key, { column, prefix }]) => {
+        const r = await pool.query(
+          `SELECT trim(${column}) AS value, count(*)::int AS total
+           FROM jemaah
+           WHERE ${column} IS NOT NULL AND trim(${column}) <> ''
+           GROUP BY 1`
+        );
+        return [key, mergeSpellings(r.rows, prefix)] as const;
+      })
+    );
+    res.json(Object.fromEntries(entries));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Gagal mengambil daftar pilihan." });
+  }
+});
+
 // Ekspor ke Excel (.xlsx) dengan filter yang sama seperti tabel, tanpa paginasi
 const EXPORT_MAX_ROWS = 50000;
 

@@ -1,5 +1,3 @@
--- Jalankan: psql "$DATABASE_URL" -f db/jemaah.sql
-
 CREATE TABLE IF NOT EXISTS jemaah (
   id               TEXT PRIMARY KEY,
   nama_lengkap     TEXT NOT NULL,

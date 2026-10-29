@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DragEvent, useCallback, useEffect, useRef, useState } from "react";
-import KecamatanField, { normalizeKecamatan } from "@/components/dashboard/KecamatanField";
+import ComboField from "@/components/dashboard/ComboField";
+import { normalizeBank, normalizeKecamatan } from "@/lib/normalize";
 import DateField, { normalizeDate, toIso } from "@/components/dashboard/DateField";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -16,10 +17,13 @@ type FieldKey =
 
 type FormState = Record<FieldKey, string>;
 
+type OptionKey = "kecamatan" | "namaBank" | "pendidikan" | "pekerjaan";
+
 type FieldDef = {
   key: FieldKey;
   label: string;
   kind?: "text" | "date" | "tel" | "select" | "textarea" | "combo";
+  optionsKey?: OptionKey; // untuk kind "combo": daftar pilihan dari data yang sudah ada
   options?: { value: string; label: string }[];
   required?: boolean;
   wide?: boolean;
@@ -42,11 +46,11 @@ const SHEETS: Sheet[] = [
       },
       { key: "tempatLahir", label: "Tempat Lahir" },
       { key: "tanggalLahir", label: "Tanggal Lahir", kind: "date" },
-      { key: "kecamatan", label: "Kecamatan", kind: "combo" },
+      { key: "kecamatan", label: "Kecamatan", kind: "combo", optionsKey: "kecamatan" },
       { key: "noTelepon", label: "Nomor HP", kind: "tel", inputMode: "tel" },
       { key: "noPorsi", label: "Nomor Porsi", required: true, inputMode: "numeric" },
       { key: "tanggalPorsi", label: "Tanggal Porsi", kind: "date" },
-      { key: "namaBank", label: "Nama Bank" },
+      { key: "namaBank", label: "Nama Bank", kind: "combo", optionsKey: "namaBank" },
       { key: "noRekening", label: "Nomor Rekening", inputMode: "numeric" },
     ],
   },
@@ -67,16 +71,22 @@ const SHEETS: Sheet[] = [
     page: 3,
     title: "Lembar 3",
     subtitle: "Alamat, pendidikan, dan pekerjaan",
-    note: "OCR hanya membaca alamat (gabungan RT/RW dan Desa/Kelurahan). Pendidikan dan pekerjaan diisi manual dari KK.",
+    note: "OCR hanya membaca alamat (gabungan RT/RW dan Desa/Kelurahan). Pendidikan dan pekerjaan diisi dari KK: pilih dari daftar atau ketik untuk mencari.",
     fields: [
       { key: "alamat", label: "Alamat", kind: "textarea", required: true, wide: true },
-      { key: "pendidikan", label: "Pendidikan" },
-      { key: "pekerjaan", label: "Jenis Pekerjaan" },
+      { key: "pendidikan", label: "Pendidikan", kind: "combo", optionsKey: "pendidikan" },
+      { key: "pekerjaan", label: "Jenis Pekerjaan", kind: "combo", optionsKey: "pekerjaan" },
     ],
   },
 ];
 
 const ALL_FIELDS = SHEETS.flatMap((s) => s.fields);
+const DATE_KEYS = new Set<FieldKey>(["tanggalLahir", "tanggalPorsi", "tanggalValidasi"]);
+const COMBO_NORMALIZE: Partial<Record<FieldKey, (value: string) => string>> = {
+  kecamatan: normalizeKecamatan,
+  namaBank: normalizeBank,
+};
+const noOptions: Record<OptionKey, string[]> = { kecamatan: [], namaBank: [], pendidikan: [], pekerjaan: [] };
 
 const emptyForm: FormState = {
   namaLengkap: "", namaAyah: "", jenisKelamin: "", tempatLahir: "", tanggalLahir: "", kecamatan: "",
@@ -85,7 +95,7 @@ const emptyForm: FormState = {
   alamat: "", pendidikan: "", pekerjaan: "",
 };
 
-type OcrState = { status: "idle" | "loading" | "done" | "error"; message?: string; missing: string[]; text: string };
+type OcrState = { status: "idle" | "loading" | "done" | "error"; message?: string; missing: string[]; text: string; notes?: string[] };
 const idleOcr: OcrState = { status: "idle", missing: [], text: "" };
 
 /** "Bin"/"Binti" mengikuti jenis kelamin; awalan yang sudah ada tidak digandakan. */
@@ -101,6 +111,7 @@ const inputClass =
 function displayValue(def: FieldDef, value: string): string {
   if (!value) return "-";
   if (def.kind === "select") return def.options?.find((o) => o.value === value)?.label ?? value;
+  if (def.kind === "date") return normalizeDate(value) ?? value; // yyyy-mm-dd -> dd/mm/yyyy
   return value;
 }
 
@@ -113,7 +124,9 @@ export default function InputDataPage() {
   const [previews, setPreviews] = useState<Record<number, { url: string; name: string; isPdf: boolean } | null>>({
     1: null, 2: null, 3: null,
   });
-  const [kecamatanOptions, setKecamatanOptions] = useState<string[]>([]);
+  const [options, setOptions] = useState<Record<OptionKey, string[]>>(noOptions);
+  const [validasiAuto, setValidasiAuto] = useState(false); // tanggal validasi diisi otomatis dari tanggal porsi
+  const validasiTouched = useRef(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedName, setSavedName] = useState<string | null>(null);
@@ -123,9 +136,9 @@ export default function InputDataPage() {
   previewsRef.current = previews;
 
   useEffect(() => {
-    fetch(`${API_URL}/api/jemaah/kecamatan`, { credentials: "include" })
+    fetch(`${API_URL}/api/jemaah/options`, { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d && setKecamatanOptions(d.kecamatan ?? []))
+      .then((d) => d && setOptions({ ...noOptions, ...d }))
       .catch(() => {});
     // Bebaskan URL preview saat halaman ditutup
     return () => {
@@ -133,7 +146,23 @@ export default function InputDataPage() {
     };
   }, []);
 
-  const setField = (key: FieldKey, value: string) => setForm((f) => ({ ...f, [key]: value }));
+  const setField = (key: FieldKey, value: string) => {
+    if (key === "tanggalValidasi") {
+      validasiTouched.current = true; // operator mengubahnya sendiri: jangan ditimpa lagi
+      setValidasiAuto(false);
+    }
+    setForm((f) => ({ ...f, [key]: value }));
+  };
+
+  // Tanggal validasi biasanya hanya selisih beberapa hari dari tanggal porsi. Kalau di Lembar 2 belum
+  // terisi (OCR tidak terbaca), isi sementara dengan tanggal porsi supaya tinggal dikoreksi.
+  useEffect(() => {
+    if (step !== 1 || validasiTouched.current || !form.tanggalPorsi) return;
+    if (form.tanggalValidasi === "" || (validasiAuto && form.tanggalValidasi !== form.tanggalPorsi)) {
+      setForm((f) => ({ ...f, tanggalValidasi: f.tanggalPorsi }));
+      setValidasiAuto(true);
+    }
+  }, [step, form.tanggalPorsi, form.tanggalValidasi, validasiAuto]);
 
   const runOcr = useCallback(async (sheet: Sheet, file: File) => {
     const page = sheet.page;
@@ -155,17 +184,21 @@ export default function InputDataPage() {
       if (!res.ok) throw new Error(data?.message ?? "OCR gagal.");
 
       const found = data.fields as Partial<Record<FieldKey, string>>;
+      if (found.tanggalValidasi && toIso(found.tanggalValidasi)) setValidasiAuto(false);
       const pageKeys = new Set(sheet.fields.map((f) => f.key));
       setForm((f) => {
         const next = { ...f };
         for (const [key, value] of Object.entries(found)) {
-          if (value && pageKeys.has(key as FieldKey)) next[key as FieldKey] = value;
+          if (!value || !pageKeys.has(key as FieldKey)) continue;
+          // OCR mengirim tanggal dd/mm/yyyy; kolom tanggal (input date) menyimpan yyyy-mm-dd
+          const converted = DATE_KEYS.has(key as FieldKey) ? toIso(value) : value;
+          if (converted) next[key as FieldKey] = converted;
         }
         return next;
       });
       setOcr((o) => ({
         ...o,
-        [page]: { status: "done", missing: data.missing ?? [], text: data.text ?? "" },
+        [page]: { status: "done", missing: data.missing ?? [], text: data.text ?? "", notes: data.notes ?? [] },
       }));
     } catch (err) {
       setOcr((o) => ({
@@ -207,7 +240,7 @@ export default function InputDataPage() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...rest, ...dates, kecamatan: normalizeKecamatan(rest.kecamatan), binBinti }),
+        body: JSON.stringify({ ...rest, ...dates, kecamatan: normalizeKecamatan(rest.kecamatan), namaBank: normalizeBank(rest.namaBank), binBinti }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message ?? "Gagal menyimpan.");
@@ -226,6 +259,8 @@ export default function InputDataPage() {
     setPreviews({ 1: null, 2: null, 3: null });
     setSavedName(null);
     setSaveError(null);
+    setValidasiAuto(false);
+    validasiTouched.current = false;
     setStep(0);
   }
 
@@ -375,6 +410,12 @@ export default function InputDataPage() {
                   : `${state.missing.length} kolom tidak terbaca (ditandai merah). Isi manual dari gambar.`}
               </p>
             )}
+            {state.status === "done" &&
+              state.notes?.map((note) => (
+                <p key={note} className="p-2.5 rounded border border-error/30 bg-error-container/40 text-on-error-container text-label-md font-label-md">
+                  {note}
+                </p>
+              ))}
             {state.text && (
               <details className="text-label-md font-label-md">
                 <summary className="cursor-pointer text-primary font-semibold">Teks mentah hasil OCR</summary>
@@ -391,6 +432,12 @@ export default function InputDataPage() {
             <p className="text-label-md font-label-md text-on-surface-variant mb-space-base">
               Hasil bacaan bisa diubah. <span className="text-error">*</span> wajib diisi.
             </p>
+            {sheet.page === 2 && validasiAuto && (
+              <p className="mb-space-base p-2.5 rounded border border-error/30 bg-error-container/40 text-on-error-container text-label-md font-label-md flex gap-2">
+                <span className="material-symbols-outlined text-[18px] shrink-0">edit_calendar</span>
+                Tanggal validasi (tanggal transaksi) tidak terbaca, jadi diisi sementara sama dengan tanggal porsi. Periksa dan ubah kalau berbeda.
+              </p>
+            )}
             {sheet.note && (
               <p className="mb-space-base p-2.5 rounded bg-surface-container text-label-md font-label-md text-on-surface-variant flex gap-2">
                 <span className="material-symbols-outlined text-[18px] shrink-0">info</span>
@@ -420,11 +467,13 @@ export default function InputDataPage() {
                     ) : def.kind === "date" ? (
                       <DateField id={`f-${def.key}`} value={value} onChange={(v) => setField(def.key, v)} className={cls} />
                     ) : def.kind === "combo" ? (
-                      <KecamatanField
+                      <ComboField
                         id={`f-${def.key}`}
                         value={value}
-                        options={kecamatanOptions}
+                        options={def.optionsKey ? options[def.optionsKey] : []}
                         onChange={(v) => setField(def.key, v)}
+                        normalize={COMBO_NORMALIZE[def.key]}
+                        placeholder="Ketik untuk mencari atau pilih"
                         className={cls}
                       />
                     ) : def.kind === "textarea" ? (
@@ -485,7 +534,7 @@ export default function InputDataPage() {
           )}
           {invalidDates.length > 0 && (
             <div role="alert" className="p-3 rounded bg-error-container/60 border border-error/30 text-on-error-container text-label-md font-label-md">
-              Tanggal tidak valid: {invalidDates.join(", ")}. Tulis seperti 07/06/2022.
+              Tanggal tidak valid: {invalidDates.join(", ")}. Pilih tanggal yang benar.
             </div>
           )}
           {saveError && (

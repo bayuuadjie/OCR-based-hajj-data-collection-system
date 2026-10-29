@@ -1,10 +1,3 @@
-"""
-Layanan OCR lokal untuk Sistem Pendataan Hajj & Umrah.
-
-- Memakai Tesseract (offline). Tidak ada data yang dikirim ke internet.
-- Gambar/PDF hanya diproses di memori, tidak ditulis ke disk dan isinya tidak dicatat di log.
-- Hanya untuk dipanggil oleh server Express (jalankan di 127.0.0.1, bukan diakses browser langsung).
-"""
 from __future__ import annotations
 
 import hmac
@@ -30,6 +23,11 @@ except ImportError:  # pragma: no cover
 OCR_TOKEN = os.environ.get("OCR_TOKEN")  # rahasia bersama dengan server Express
 MAX_BYTES = 15 * 1024 * 1024
 Image.MAX_IMAGE_PIXELS = 120_000_000  # cegah "decompression bomb"
+
+BILINEAR = Image.Resampling.BILINEAR
+BICUBIC = Image.Resampling.BICUBIC
+LANCZOS = Image.Resampling.LANCZOS
+BOX = Image.Resampling.BOX
 
 app = FastAPI(title="OCR Jemaah", docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -87,11 +85,11 @@ def estimate_skew(gray: Image.Image) -> float:
     """
     small = gray.copy()
     small.thumbnail((700, 700))
-    bw = small.point(lambda p: 0 if p < 150 else 255)
+    bw = small.point([0 if value < 150 else 255 for value in range(256)])
 
     def score(angle: float) -> float:
-        r = bw.rotate(angle, resample=Image.BILINEAR, fillcolor=255)
-        rows = list(r.resize((1, r.height), Image.BOX).getdata())
+        r = bw.rotate(angle, resample=BILINEAR, fillcolor=255)
+        rows = list(r.resize((1, r.height), BOX).tobytes())
         mean = sum(rows) / len(rows)
         return sum((v - mean) ** 2 for v in rows)
 
@@ -111,15 +109,15 @@ def preprocess(img: Image.Image) -> Image.Image:
 
     angle = estimate_skew(img)
     if abs(angle) >= 0.2:
-        img = img.rotate(angle, resample=Image.BICUBIC, expand=True, fillcolor=255)
+        img = img.rotate(angle, resample=BICUBIC, expand=True, fillcolor=255)
 
     longest = max(img.size)
     if longest < 2000:  # Tesseract paling akurat di sekitar 300 dpi
         scale = min(3.0, 2000 / longest)
-        img = img.resize((int(img.width * scale), int(img.height * scale)), Image.LANCZOS)
+        img = img.resize((int(img.width * scale), int(img.height * scale)), LANCZOS)
     elif longest > 4500:
         scale = 4000 / longest
-        img = img.resize((int(img.width * scale), int(img.height * scale)), Image.LANCZOS)
+        img = img.resize((int(img.width * scale), int(img.height * scale)), LANCZOS)
 
     img = ImageOps.autocontrast(img, cutoff=1)
     return img.filter(ImageFilter.SHARPEN)

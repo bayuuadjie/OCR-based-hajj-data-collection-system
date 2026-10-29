@@ -1,13 +1,3 @@
-"""
-Mengubah baris-baris teks hasil OCR menjadi isian kolom jemaah.
-
-Cara kerja: formulir berisi pasangan "Label : isi". Setiap baris dicocokkan dengan
-daftar label (alias) tiap kolom secara fuzzy (toleran salah baca OCR), lalu isinya
-dinormalkan (tanggal -> YYYY-MM-DD, nomor -> angka saja, dst).
-
-Kalau label di formulir kamu berbeda, cukup ubah/tambah alias di PAGES di bawah.
-File ini tidak butuh Tesseract, jadi bisa diuji sendiri.
-"""
 from __future__ import annotations
 
 import re
@@ -42,11 +32,27 @@ def digits_only(value: str) -> str:
     return re.sub(r"\D", "", (value or "").translate(_DIGIT_FIX))
 
 
+def find_long_number(line: str) -> str:
+    """
+    Angka panjang 9-12 digit (nomor porsi) di satu baris, atau "". Dipakai untuk nilai yang
+    tidak punya label. Tanggal angka (8 digit) dan nomor lain yang pendek tidak ikut terbaca.
+    """
+    for m in re.finditer(r"(?<![A-Za-z])[0-9OoIl|]{9,12}(?![A-Za-z])", line or ""):
+        if sum(c.isdigit() for c in m.group()) >= 6:  # bukan sekadar rentetan "llll"
+            return digits_only(m.group())
+    return ""
+
+
 def norm_phone(value: str) -> str:
     d = digits_only(value)
     if d.startswith("62"):
         d = "0" + d[2:]
-    return d
+    # Nomor HP Indonesia = 08 + 8-11 digit. Titik dua yang salah baca jadi "1" dan menempel di depan
+    # ("1085706051232") ikut terbuang.
+    m = re.search(r"08\d{8,11}", d)
+    if m:
+        d = m.group()
+    return d if len(d) >= 9 else ""  # terlalu pendek = bukan nomor telepon (mis. potongan nomor KTP)
 
 
 def _valid_iso(y: int, m: int, d: int) -> str:
@@ -179,10 +185,23 @@ _BANKS = {
 }
 
 
+_BANK_ACRONYMS = {"CIMB", "BTPN", "OCBC", "BPRS"}  # singkatan 4 huruf (yang 2-3 huruf otomatis dianggap singkatan)
+
+
+def _pretty_bank(name: str) -> str:
+    """Singkatan kapital dipertahankan (CIMB, BCA, BPD); kata lain diawali huruf besar (JAWA -> Jawa)."""
+    words = []
+    for w in name.split():
+        keep = w.isalpha() and w.isupper() and (len(w) <= 3 or w in _BANK_ACRONYMS)
+        words.append(w if keep else w.capitalize())
+    return " ".join(words)
+
+
 def norm_bank(value: str) -> str:
-    v = clean_text(value)
-    key = re.sub(r"^bank\s+", "", v, flags=re.I).lower()
-    return _BANKS.get(key, v)
+    rest = re.sub(r"^bank\s+", "", clean_text(value), flags=re.I)
+    if not rest:
+        return ""
+    return _BANKS.get(rest.lower(), "Bank " + _pretty_bank(rest))
 
 
 def norm_father(value: str) -> str:
@@ -201,6 +220,10 @@ class Spec:
     aliases: tuple[str, ...]  # tulisan label yang mungkin muncul di formulir
     normalize: Callable[[str], str] = clean_text
     optional: bool = False  # tidak dianggap "tidak terbaca" kalau kosong
+    fallback: tuple[str, ...] = ()  # label cadangan: dicoba hanya kalau `aliases` tidak menemukan apa-apa
+    below: tuple[str, ...] = ()  # kata/judul yang nilainya ada di baris-baris DI BAWAHNYA (tanpa label)
+    below_lines: int = 3  # berapa baris di bawah judul yang dicari
+    pick: Callable[[str], str] | None = None  # pengambil nilai dari satu baris (untuk `below`)
 
 
 PAGES: dict[int, list[Spec]] = {
@@ -212,17 +235,21 @@ PAGES: dict[int, list[Spec]] = {
         Spec("tempatLahir", ("tempat lahir", "tmp lahir")),
         Spec("tanggalLahir", ("tanggal lahir", "tgl lahir", "tgl. lahir"), parse_date),
         Spec("kecamatan", ("kecamatan", "kec"), norm_kecamatan),
-        Spec("noTelepon", ("nomor hp", "no hp", "no. hp", "nomor telepon", "no telepon", "no telp", "nomor handphone", "no handphone", "nomor wa", "telepon", "hp"), norm_phone),
-        Spec("noPorsi", ("nomor porsi", "no porsi", "no. porsi", "porsi"), digits_only),
-        Spec("tanggalPorsi", ("tanggal set", "tanggal setor", "tgl set", "tgl setor", "tanggal porsi", "tgl porsi"), parse_date),
-        Spec("namaBank", ("nama bank", "bank"), norm_bank),
+        Spec("noTelepon", ("no handphone", "no. handphone", "nomor handphone", "nomor hp", "no hp", "no. hp", "nomor telepon", "no telepon", "no telp", "nomor wa", "telepon", "hp"), norm_phone),
+        # Di dokumen, nomor porsi TIDAK berlabel: angkanya ada di bawah judul "Kementerian Haji dan Umrah".
+        Spec("noPorsi", (), digits_only, below=("kementerian haji dan umrah",), pick=find_long_number,
+             fallback=("nomor porsi", "no porsi", "no. porsi", "porsi")),
+        # Di dokumen, tanggal porsi ada di sebelah tulisan "Kab. Magetan," (tanpa label tanggal).
+        Spec("tanggalPorsi", ("kab. magetan", "kab magetan", "kabupaten magetan"), parse_date,
+             fallback=("tanggal porsi", "tgl porsi", "tanggal set", "tanggal setor", "tgl set", "tgl setor")),
+        Spec("namaBank", ("bank", "nama bank"), norm_bank),
         Spec("noRekening", ("nomor rekening", "no rekening", "no. rekening", "no rek", "rekening"), digits_only),
     ],
     # Lembar 2: status haji & validasi
     2: [
-        Spec("pernahHaji", ("status haji", "pernah haji", "sudah haji", "status"), norm_pernah_haji, optional=True),
+        Spec("pernahHaji", ("status haji", "pernah haji", "sudah haji", "pergi haji"), norm_pernah_haji, optional=True),
         Spec("noValidasi", ("nomor validasi", "no validasi", "no. validasi", "validasi"), digits_only),
-        Spec("tanggalValidasi", ("tanggal validasi", "tgl validasi", "tgl. validasi"), parse_date),
+        Spec("tanggalValidasi", ("tanggal transaksi", "tgl transaksi", "tanggal validasi", "tgl validasi"), parse_date),
     ],
     # Lembar 3: alamat = gabungan label "RT/RW" dan "Desa/Kelurahan".
     # (Pendidikan & pekerjaan sengaja tidak di-OCR: datanya dari KK dan isinya beberapa orang.)
@@ -232,6 +259,13 @@ PAGES: dict[int, list[Spec]] = {
         Spec("_desa", ("desa/kelurahan", "desa / kelurahan", "desa kelurahan", "kelurahan/desa", "kel/desa", "kelurahan", "desa")),
     ],
 }
+
+# Baris berlabel ini ada di dokumen tapi bukan kolom kita. Tanpa daftar ini, "NOMOR KTP ..." bisa
+# dicocokkan (fuzzy) ke "nomor hp" dan mengisinya dengan angka KTP.
+_IGNORED_LABELS = (
+    "nomor ktp", "no ktp", "no. ktp", "nik", "kode pos", "provinsi", "kabupaten/kodya", "kabupaten kodya",
+    "email", "e-mail", "status perkawinan", "pekerjaan", "pendidikan",
+)
 
 # Beberapa formulir menulis "Tempat/Tanggal Lahir : Bandung, 14-08-1972" dalam satu baris.
 _TTL_ALIASES = ("tempat tanggal lahir", "tempat tgl lahir", "tempat dan tanggal lahir", "ttl", "tempat/tanggal lahir")
@@ -253,8 +287,39 @@ class _Match:
     alias_len: int
 
 
+_SHORT_WORDS = {"rt", "rw", "no", "di", "ke", "jl", "yg", "dan", "dsn", "kp"}  # kata pendek yang BUKAN sampah
+
+
+def _is_junk_token(token: str) -> bool:
+    """Sampah OCR (noda/stempel): simbol, satu karakter, atau dua huruf yang bukan kata pendek asli.
+    Angka dua digit ("04" pada "RT 04") dan "RT"/"RW"/"NO" bukan sampah."""
+    t = re.sub(r"[^A-Za-z0-9]", "", token)
+    if len(t) <= 1:
+        return True
+    return len(t) == 2 and t.isalpha() and t.lower() not in _SHORT_WORDS
+
+
 def _best_match(line: str, specs: list[tuple[str, tuple[str, ...]]]) -> _Match | None:
-    """Cari kolom yang labelnya paling cocok dengan awal baris ini."""
+    """
+    Cari kolom yang labelnya paling cocok dengan awal baris ini. Kalau tidak ada, coba lagi dengan
+    membuang 1-2 "kata" sampah pendek di depan baris (noda/stempel, mis. "ee Bank : CIMB NIAGA").
+    """
+    match = _match_at(line, specs)
+    if match is not None:
+        return match
+    tokens = line.split()
+    for skip in (1, 2):
+        if skip >= len(tokens):
+            break
+        if not all(_is_junk_token(t) for t in tokens[:skip]):
+            break  # yang dibuang hanya sampah
+        match = _match_at(" ".join(tokens[skip:]), specs)
+        if match is not None:
+            return match
+    return None
+
+
+def _match_at(line: str, specs: list[tuple[str, tuple[str, ...]]]) -> _Match | None:
     best: _Match | None = None
 
     def consider(key: str, alias: str, score: float, value: str) -> None:
@@ -289,49 +354,109 @@ def _best_match(line: str, specs: list[tuple[str, tuple[str, ...]]]) -> _Match |
     return best
 
 
+def _is_heading(line: str, phrase: str) -> bool:
+    """Baris ini memuat judul `phrase` (toleran salah baca). Baris pendek tidak dihitung:
+    kalau tidak, satu huruf "a" pun "ada di dalam" kalimat panjang."""
+    a, b = _n(line), _n(phrase)
+    return len(a) >= 0.7 * len(b) and fuzz.partial_ratio(a, b) >= 88
+
+
 def output_keys(page: int) -> list[str]:
     """Kolom hasil akhir untuk lembar ini (tanpa kunci bahan berawalan "_")."""
     keys = [s.key for s in PAGES[page] if not s.key.startswith("_")]
     return keys + ["alamat"] if page == 3 else keys
 
 
-def extract_fields(page: int, lines: list[str]) -> dict[str, str]:
-    """Kembalikan {namaKolom: nilai}. Kolom yang tidak ketemu bernilai ""."""
+def _extract(page: int, lines: list[str]) -> tuple[dict[str, str], set[str]]:
+    """Hasil kolom + daftar kunci bahan (termasuk RT/RW dan Desa terpisah) yang berhasil terbaca."""
     specs = PAGES[page]
     by_key = {s.key: s for s in specs}
 
-    lookup = [(s.key, s.aliases) for s in specs]
-    if page == 1:
-        lookup.append(("_ttl", _TTL_ALIASES))
+    # Semua label ikut dicocokkan sekaligus supaya satu baris selalu "milik" kolom yang paling cocok
+    # (label cadangan diberi awalan "fb:"); tahap menentukan label mana yang boleh mengisi nilai.
+    ttl = [("_ttl", _TTL_ALIASES)] if page == 1 else []
+    every_label = (
+        [(s.key, s.aliases) for s in specs if s.aliases]
+        + [("fb:" + s.key, s.fallback) for s in specs if s.fallback]
+        + [("ignore", _IGNORED_LABELS)]
+        + ttl
+    )
 
-    clean_lines = [clean_text(l) for l in lines]
+    clean_lines = [clean_text(re.sub(r",(?=[^\s,])", ", ", l)) for l in lines]  # "Magetan,07" -> "Magetan, 07"
     clean_lines = [l for l in clean_lines if l]
-    raw: dict[str, str] = {}
+
+    normalized: dict[str, str] = {}  # nilai akhir per kolom (hanya yang tidak kosong)
+    raw_ttl = ""
     used: set[int] = set()
 
     def is_label_line(text: str) -> bool:
-        return _best_match(text, lookup) is not None
+        return _best_match(text, every_label) is not None
 
-    for i, line in enumerate(clean_lines):
-        if i in used:
+    def scan(fallback_stage: bool) -> None:
+        """Cocokkan baris dengan label. Kolom yang sudah terisi tidak ditimpa; yang masih
+        kosong (mis. label ketemu tapi isinya tidak terbaca) boleh dicoba lagi di baris lain."""
+        nonlocal raw_ttl
+        for i, line in enumerate(clean_lines):
+            if i in used:
+                continue
+            match = _best_match(line, every_label)
+            if match is None:
+                continue
+            is_fallback = match.key.startswith("fb:")
+            if is_fallback != fallback_stage:
+                continue  # baris ini milik label tahap lain: dilewati, tapi tidak dicuri kolom lain
+            key = match.key.removeprefix("fb:")
+            if key == "ignore":
+                continue  # baris ini sudah "diklaim" label non-kolom
+            if key == "_ttl":
+                if raw_ttl:
+                    continue
+            elif normalized.get(key):
+                continue
+
+            value = match.value.strip(" :;=|_.-")
+            tokens = value.split()
+            if len(tokens) > 1 and tokens[0] in {"1", "|", "!", ".", ",", "-", "_", "~"}:
+                value = " ".join(tokens[1:])  # titik dua yang salah baca
+
+            # Isi ada di baris berikutnya (label berdiri sendiri, mis. "Tanggal Set." lalu tanggalnya di bawah)
+            took_next = False
+            if not value and i + 1 < len(clean_lines) and not is_label_line(clean_lines[i + 1]):
+                value = clean_lines[i + 1]
+                took_next = True
+
+            if key == "_ttl":
+                raw_ttl = value
+                continue
+            result = by_key[key].normalize(value)
+            if result:
+                normalized[key] = result
+                if took_next:
+                    used.add(i + 1)
+
+    # Tahap 1: label utama
+    scan(fallback_stage=False)
+
+    # Tahap 2: nilai yang ada DI BAWAH sebuah judul (mis. nomor porsi di bawah "Kementerian Haji dan Umrah")
+    for spec in specs:
+        if not spec.below or normalized.get(spec.key):
             continue
-        match = _best_match(line, lookup)
-        if match is None or match.key in raw:
-            continue
+        for i, line in enumerate(clean_lines):
+            if not any(_is_heading(line, phrase) for phrase in spec.below):
+                continue
+            for j in range(i + 1, min(i + 1 + spec.below_lines, len(clean_lines))):
+                if is_label_line(clean_lines[j]):
+                    continue  # baris berlabel (mis. "No Handphone : 0812...") bukan nilai tanpa label
+                value = spec.normalize(spec.pick(clean_lines[j]) if spec.pick else clean_lines[j])
+                if value:
+                    normalized[spec.key] = value
+                    break
+            if normalized.get(spec.key):
+                break
 
-        value = match.value.strip(" :;=|_.-")
-        tokens = value.split()
-        if len(tokens) > 1 and tokens[0] in {"1", "|", "!", ".", ",", "-", "_", "~"}:
-            value = " ".join(tokens[1:])  # titik dua yang salah baca
+    # Tahap 3: label cadangan, hanya untuk kolom yang masih kosong
+    scan(fallback_stage=True)
 
-        # Isi ada di baris berikutnya (label berdiri sendiri, mis. "Tanggal Set." lalu tanggalnya di bawah)
-        if not value and i + 1 < len(clean_lines) and not is_label_line(clean_lines[i + 1]):
-            value = clean_lines[i + 1]
-            used.add(i + 1)
-
-        raw[match.key] = value
-
-    normalized = {key: by_key[key].normalize(value) for key, value in raw.items() if key in by_key}
     result = {key: normalized.get(key, "") for key in output_keys(page)}
 
     if page == 3:
@@ -339,16 +464,38 @@ def extract_fields(page: int, lines: list[str]) -> dict[str, str]:
         result["alamat"] = ", ".join(p for p in parts if p)
 
     # Pecah "Tempat/Tanggal Lahir" kalau kolom terpisahnya kosong
-    ttl = raw.get("_ttl", "")
-    if ttl and page == 1:
-        tgl = parse_date(ttl)
+    if raw_ttl and page == 1:
+        tgl = parse_date(raw_ttl)
         if tgl and not result["tanggalLahir"]:
             result["tanggalLahir"] = tgl
         if not result["tempatLahir"]:
-            place = re.split(r"[,;]|\s\d", ttl, maxsplit=1)[0]
+            place = re.split(r"[,;]|\s\d", raw_ttl, maxsplit=1)[0]
             result["tempatLahir"] = clean_text(place)
 
-    return result
+    return result, {k for k, v in normalized.items() if v}
+
+
+def extract_fields(page: int, lines: list[str]) -> dict[str, str]:
+    """Kembalikan {namaKolom: nilai}. Kolom yang tidak ketemu bernilai ""."""
+    return _extract(page, lines)[0]
+
+
+def extract_with_gaps(page: int, lines: list[str]) -> tuple[dict[str, str], list[str], list[str]]:
+    """
+    (kolom, jumlah-bagian-yang-hilang, catatan). Bagian yang hilang dihitung lebih teliti dari
+    kolom kosong: alamat yang hanya berisi Desa (RT/RW tidak terbaca) tetap dihitung kurang.
+    """
+    fields, found = _extract(page, lines)
+    gaps = [s.key for s in PAGES[page] if not s.optional and s.key not in found]
+    # Kolom yang diisi dari label lain (mis. tempat/tanggal lahir gabungan) tidak dihitung kurang
+    gaps = [k for k in gaps if k.startswith("_") or not fields.get(k)]
+    notes = []
+    if page == 3 and fields.get("alamat"):
+        if "_rtrw" in gaps:
+            notes.append("RT/RW tidak terbaca, alamat belum lengkap.")
+        if "_desa" in gaps:
+            notes.append("Desa/Kelurahan tidak terbaca, alamat belum lengkap.")
+    return fields, gaps, notes
 
 
 def expected_missing(page: int, fields: dict[str, str]) -> list[str]:
