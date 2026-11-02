@@ -3,8 +3,6 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import KecamatanChart from "@/components/dashboard/KecamatanChart";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-
 type CountRow = { label: string; total: number };
 
 type Laporan = {
@@ -49,18 +47,18 @@ function periodText(from: string, to: string) {
 }
 
 const fieldClass =
-  "w-full h-10 px-3 bg-surface rounded-lg border border-outline-variant text-body-sm text-on-surface focus:border-primary-container focus:ring-1 focus:ring-primary-container focus:outline-none";
+  "w-full h-11 px-3.5 bg-surface rounded-xl border border-outline-variant text-body-sm text-on-surface focus:border-primary focus:ring-4 focus:ring-primary/15 focus:outline-none transition-all";
 
 function StatCard({ label, value, hint, icon }: { label: string; value: string; hint?: string; icon: string }) {
   return (
-    <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm p-space-base flex items-start gap-3">
-      <div className="w-10 h-10 shrink-0 rounded-lg bg-primary-fixed text-on-primary-fixed flex items-center justify-center">
-        <span className="material-symbols-outlined">{icon}</span>
+    <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-xs p-4 sm:p-5 flex items-start gap-3.5 transition-transform hover:-translate-y-0.5 duration-200">
+      <div className="w-11 h-11 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-xs">
+        <span className="material-symbols-outlined text-[22px]">{icon}</span>
       </div>
       <div className="min-w-0">
-        <p className="text-label-sm font-label-sm uppercase tracking-wide text-on-surface-variant">{label}</p>
-        <p className="text-headline-md font-headline-md text-on-surface leading-tight">{value}</p>
-        {hint && <p className="text-label-md font-label-md text-outline">{hint}</p>}
+        <p className="text-[11px] font-bold uppercase tracking-wider text-outline truncate">{label}</p>
+        <p className="text-xl sm:text-2xl font-extrabold text-on-surface font-headline-md leading-tight mt-0.5">{value}</p>
+        {hint && <p className="text-xs text-outline mt-0.5">{hint}</p>}
       </div>
     </div>
   );
@@ -113,7 +111,7 @@ export default function LaporanPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/laporan?${query()}`, { credentials: "include" });
+      const res = await fetch(`/api/laporan?${query()}`, { credentials: "include" });
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.message ?? "Gagal memuat laporan.");
       setData(json as Laporan);
@@ -146,7 +144,7 @@ export default function LaporanPage() {
   async function handleExport() {
     setExporting(true);
     try {
-      const res = await fetch(`${API_URL}/api/laporan/export?${query()}`, { credentials: "include" });
+      const res = await fetch(`/api/laporan/export?${query()}`, { credentials: "include" });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
         throw new Error(json?.message ?? "Gagal mengekspor laporan.");
@@ -185,9 +183,9 @@ export default function LaporanPage() {
           type="button"
           onClick={handleExport}
           disabled={exporting || !r || r.total === 0}
-          className="h-10 px-space-base rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-label-lg text-label-lg flex items-center justify-center gap-space-xs hover:bg-surface-container hover:border-outline transition-colors duration-150 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed self-start sm:self-auto"
+          className="btn-liquid-glass-secondary h-11 px-4 rounded-xl font-semibold text-label-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer self-start sm:self-auto"
         >
-          <span className="material-symbols-outlined text-tertiary">table_view</span>
+          <span className="material-symbols-outlined text-primary text-[20px]">table_view</span>
           <span>{exporting ? "Mengekspor..." : "Export Excel"}</span>
         </button>
       </section>
@@ -195,33 +193,34 @@ export default function LaporanPage() {
       {/* Filter periode */}
       <form
         onSubmit={apply}
-        className="bg-surface-container-lowest rounded-xl border border-outline-variant p-space-base shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-space-base"
+        className="bg-surface-container-lowest rounded-2xl border border-outline-variant p-4 sm:p-5 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-4"
       >
-        <div className="lg:col-span-3 flex flex-col gap-1">
-          <label htmlFor="l-from" className="text-label-sm font-label-sm uppercase tracking-wide text-on-surface-variant">
+        <div className="lg:col-span-3 flex flex-col gap-1.5">
+          <label htmlFor="l-from" className="text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
             Validasi Dari
           </label>
           <input id="l-from" type="date" className={fieldClass} value={draft.from} onChange={(e) => setDraft({ ...draft, from: e.target.value })} />
         </div>
-        <div className="lg:col-span-3 flex flex-col gap-1">
-          <label htmlFor="l-to" className="text-label-sm font-label-sm uppercase tracking-wide text-on-surface-variant">
+        <div className="lg:col-span-3 flex flex-col gap-1.5">
+          <label htmlFor="l-to" className="text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
             Validasi Sampai
           </label>
           <input id="l-to" type="date" className={fieldClass} value={draft.to} onChange={(e) => setDraft({ ...draft, to: e.target.value })} />
         </div>
-        <div className="sm:col-span-2 lg:col-span-6 grid grid-cols-2 sm:flex sm:justify-end gap-space-sm lg:self-end">
+        <div className="sm:col-span-2 lg:col-span-6 grid grid-cols-2 sm:flex sm:justify-end gap-2.5 lg:self-end">
           <button
             type="button"
             onClick={reset}
-            className="h-10 px-space-base rounded-lg border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-label-md text-label-md transition-colors duration-150"
+            className="btn-liquid-glass-secondary h-11 px-4 rounded-xl font-semibold text-label-md flex items-center justify-center gap-1.5 cursor-pointer"
           >
-            Reset
+            <span className="material-symbols-outlined text-[18px]">restart_alt</span>
+            <span>Reset</span>
           </button>
           <button
             type="submit"
-            className="h-10 px-space-base rounded-lg bg-primary-container text-on-primary font-label-md text-label-md flex items-center justify-center gap-1 hover:bg-primary transition-colors duration-150"
+            className="btn-liquid-glass h-11 px-5 rounded-xl font-semibold text-label-md flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[16px]">filter_alt</span>
+            <span className="material-symbols-outlined text-white text-[18px]">filter_alt</span>
             <span>Terapkan</span>
           </button>
         </div>

@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useState, FormEvent } from "react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-
 type Operator = {
   id: string;
   username: string;
@@ -25,7 +23,7 @@ type FormState = {
 const emptyForm: FormState = { username: "", name: "", email: "", role: "OPERATOR", password: "" };
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(path, {
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     ...init,
@@ -36,7 +34,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 const inputClass =
-  "w-full h-10 px-3 bg-surface rounded-lg border border-outline-variant text-body-sm text-on-surface placeholder:text-outline focus:border-primary-container focus:ring-1 focus:ring-primary-container focus:outline-none";
+  "w-full h-11 px-3.5 bg-surface rounded-xl border border-outline-variant text-body-sm text-on-surface placeholder:text-outline focus:border-primary focus:ring-4 focus:ring-primary/15 focus:outline-none transition-all";
 
 export default function UserManagementPage() {
   const [operators, setOperators] = useState<Operator[]>([]);
@@ -145,7 +143,7 @@ export default function UserManagementPage() {
         </div>
         <button
           onClick={openCreate}
-          className="h-10 px-space-base rounded-lg bg-primary-container text-on-primary font-label-lg text-label-lg flex items-center gap-space-xs hover:bg-primary transition-colors duration-150 shadow-sm self-start sm:self-auto"
+          className="btn-liquid-glass h-11 px-5 rounded-xl font-semibold text-label-md flex items-center gap-2 shadow-md cursor-pointer self-start sm:self-auto"
         >
           <span className="material-symbols-outlined text-[20px]">person_add</span>
           <span>Tambah Akun</span>
@@ -344,21 +342,21 @@ export default function UserManagementPage() {
               />
             </div>
 
-            <div className="flex justify-end gap-space-sm pt-2">
+            <div className="flex justify-end gap-3 pt-3">
               <button
                 type="button"
                 onClick={() => setModal(null)}
                 disabled={saving}
-                className="h-10 px-space-base rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container text-label-lg font-label-lg transition-colors"
+                className="btn-liquid-glass-secondary h-11 px-5 rounded-xl font-semibold text-label-md cursor-pointer"
               >
                 Batal
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="h-10 px-space-base rounded-lg bg-primary-container text-on-primary hover:bg-primary text-label-lg font-label-lg transition-colors disabled:opacity-60"
+                className="btn-liquid-glass h-11 px-6 rounded-xl font-semibold text-label-md shadow-md cursor-pointer disabled:opacity-60"
               >
-                {saving ? "Menyimpan..." : "Simpan"}
+                {saving ? "Menyimpan..." : "Simpan Akun"}
               </button>
             </div>
           </form>

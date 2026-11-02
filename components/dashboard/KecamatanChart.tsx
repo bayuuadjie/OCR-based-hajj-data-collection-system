@@ -60,26 +60,26 @@ export default function KecamatanChart({ rows }: { rows: Row[] }) {
   const legend = segmentsOf(sum, mode).filter((s) => s.value > 0);
 
   return (
-    <section className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm p-space-base">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm">
+    <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-xs p-5 transition-colors duration-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-title-md font-title-md text-on-surface">Grafik per Kecamatan</h2>
-          <p className="text-label-md font-label-md text-outline">
+          <h2 className="text-title-md font-bold font-headline-sm text-on-surface">Grafik per Kecamatan</h2>
+          <p className="text-body-sm text-on-surface-variant mt-0.5">
             Panjang batang dibandingkan antar kecamatan, diurutkan dari yang terbanyak.
           </p>
         </div>
 
-        <div role="group" aria-label="Pembagian batang" className="inline-flex rounded-lg border border-outline-variant overflow-hidden self-start">
+        <div role="group" aria-label="Pembagian batang" className="inline-flex rounded-xl border border-outline-variant overflow-hidden self-start p-0.5 bg-surface">
           {MODES.map((m) => (
             <button
               key={m.key}
               type="button"
               aria-pressed={mode === m.key}
               onClick={() => setMode(m.key)}
-              className={`h-9 px-3 text-label-md font-label-md transition-colors ${
+              className={`h-8 px-3 text-label-sm font-semibold rounded-lg transition-all ${
                 mode === m.key
-                  ? "bg-primary-container text-on-primary"
-                  : "bg-surface text-on-surface-variant hover:bg-surface-container"
+                  ? "bg-primary text-white shadow-xs"
+                  : "text-on-surface-variant hover:text-primary hover:bg-surface-container"
               }`}
             >
               {m.label}
@@ -118,7 +118,7 @@ export default function KecamatanChart({ rows }: { rows: Row[] }) {
               <div
                 role="img"
                 aria-label={`${r.kecamatan}: ${fmt(r.total)} jemaah${detail ? ` (${detail})` : ""}`}
-                className="mt-1 h-5 rounded bg-surface-container-highest overflow-hidden flex"
+                className="mt-1.5 h-3.5 rounded-full bg-surface-container-highest overflow-hidden flex"
               >
                 {segs.map(
                   (s) =>

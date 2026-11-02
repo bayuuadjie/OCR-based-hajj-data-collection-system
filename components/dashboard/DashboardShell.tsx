@@ -40,24 +40,24 @@ export default function DashboardShell({
     return () => window.removeEventListener("keydown", onKey);
   }, [mobileOpen]);
 
+  function handleToggleCollapse() {
+    const next = !collapsed;
+    setCollapsed(next);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+    } catch {}
+  }
+
   function handleMenuClick() {
-    // Satu tombol hamburger: di desktop memperkecil sidebar, di mobile membuka menu geser
-    if (window.matchMedia("(min-width: 1024px)").matches) {
-      const next = !collapsed;
-      setCollapsed(next);
-      try {
-        window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
-      } catch {}
-    } else {
-      setMobileOpen((open) => !open);
-    }
+    setMobileOpen((open) => !open);
   }
 
   return (
     <div className="bg-background text-on-surface antialiased flex h-dvh overflow-hidden">
+      {/* Backdrop mobile saat sidebar terbuka */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden transition-opacity"
           onClick={() => setMobileOpen(false)}
           aria-hidden="true"
         />
@@ -68,9 +68,10 @@ export default function DashboardShell({
         collapsed={collapsed}
         mobileOpen={mobileOpen}
         onCloseMobile={() => setMobileOpen(false)}
+        onToggleCollapse={handleToggleCollapse}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
         <Topbar user={user} onMenuClick={handleMenuClick} />
         {children}
       </div>

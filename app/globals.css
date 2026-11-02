@@ -2,115 +2,132 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===== Warna terang (default) ===== */
+/* ===== Light Mode Palette (Base: White & #F96A0E Vibrant Sunset) ===== */
 :root {
-  --color-error-container: #ffdad6;
-  --color-primary-fixed: #dce1ff;
-  --color-on-surface: #131b2e;
-  --color-on-tertiary-fixed-variant: #005137;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-variant: #dae2fd;
-  --color-inverse-on-surface: #eef0ff;
-  --color-on-tertiary-container: #76eab6;
-  --color-surface: #faf8ff;
-  --color-on-primary-fixed-variant: #0039b5;
-  --color-secondary: #006a61;
-  --color-primary-container: #1d4ed8;
-  --color-on-surface-variant: #434655;
-  --color-on-secondary-container: #006f66;
-  --color-on-tertiary: #ffffff;
-  --color-surface-bright: #faf8ff;
-  --color-surface-dim: #d2d9f4;
-  --color-on-primary: #ffffff;
-  --color-on-primary-fixed: #001551;
-  --color-on-background: #131b2e;
-  --color-surface-container-high: #e2e7ff;
-  --color-tertiary: #004f35;
-  --color-on-secondary: #ffffff;
-  --color-primary: #0037b0;
-  --color-inverse-surface: #283044;
-  --color-on-tertiary-fixed: #002114;
-  --color-tertiary-fixed-dim: #68dba9;
-  --color-primary-fixed-dim: #b7c4ff;
-  --color-tertiary-container: #006948;
-  --color-tertiary-fixed: #85f8c4;
-  --color-background: #faf8ff;
-  --color-error: #ba1a1a;
-  --color-outline-variant: #c4c5d7;
-  --color-inverse-primary: #b7c4ff;
-  --color-secondary-fixed: #89f5e7;
-  --color-on-secondary-fixed: #00201d;
-  --color-outline: #747686;
-  --color-secondary-container: #86f2e4;
-  --color-surface-container: #eaedff;
-  --color-secondary-fixed-dim: #6bd8cb;
-  --color-on-secondary-fixed-variant: #005049;
-  --color-surface-container-low: #f2f3ff;
-  --color-on-error: #ffffff;
-  --color-surface-container-highest: #dae2fd;
-  --color-on-error-container: #93000a;
-  --color-on-primary-container: #cad3ff;
-  --color-surface-tint: #2151da;
-  --watermark-line: rgba(196, 197, 215, 0.15);
+  --color-primary: #F96A0E;
+  --color-primary-container: #F96A0E;
+  --color-on-primary: #FFFFFF;
+  --color-on-primary-container: #FFFFFF;
+  --color-primary-fixed: #FFE8D6;
+  --color-primary-fixed-dim: #FFCBA4;
+  --color-on-primary-fixed: #4D1A00;
+  --color-on-primary-fixed-variant: #803000;
+
+  --color-secondary: #B45309;
+  --color-secondary-container: #FEF3C7;
+  --color-on-secondary: #FFFFFF;
+  --color-on-secondary-container: #78350F;
+  --color-secondary-fixed: #FDE68A;
+  --color-secondary-fixed-dim: #FCD34D;
+  --color-on-secondary-fixed: #451A03;
+  --color-on-secondary-fixed-variant: #92400E;
+
+  --color-tertiary: #059669;
+  --color-tertiary-container: #D1FAE5;
+  --color-on-tertiary: #FFFFFF;
+  --color-on-tertiary-container: #065F46;
+  --color-tertiary-fixed: #A7F3D0;
+  --color-tertiary-fixed-dim: #6EE7B7;
+  --color-on-tertiary-fixed: #022C22;
+  --color-on-tertiary-fixed-variant: #047857;
+
+  --color-surface: #F9FAFB;
+  --color-background: #F3F4F6;
+  --color-on-surface: #111827;
+  --color-on-background: #111827;
+  --color-on-surface-variant: #4B5563;
+
+  --color-surface-container-lowest: #FFFFFF;
+  --color-surface-container-low: #F8FAFC;
+  --color-surface-container: #F1F4F8;
+  --color-surface-container-high: #E5E9F0;
+  --color-surface-container-highest: #DDE2EB;
+  --color-surface-variant: #EEF2F6;
+  --color-surface-bright: #FFFFFF;
+  --color-surface-dim: #E2E8F0;
+
+  --color-inverse-surface: #1F2937;
+  --color-inverse-on-surface: #F9FAFB;
+  --color-inverse-primary: #FFB582;
+
+  --color-outline: #9CA3AF;
+  --color-outline-variant: #E5E7EB;
+  --color-surface-tint: #F96A0E;
+
+  --color-error: #DC2626;
+  --color-error-container: #FEE2E2;
+  --color-on-error: #FFFFFF;
+  --color-on-error-container: #991B1B;
+
+  --watermark-line: rgba(249, 106, 14, 0.05);
   color-scheme: light;
 }
 
-/* ===== Warna gelap ===== */
+/* ===== Dark Mode Palette (Base: Deep Charcoal/Slate & Glowing #F96A0E) ===== */
 .dark {
-  --color-error-container: #260603;
-  --color-primary-fixed: #040b33;
-  --color-on-surface: #dddee0;
-  --color-on-tertiary-fixed-variant: #d2dbd8;
-  --color-surface-container-lowest: #171717;
-  --color-surface-variant: #13151b;
-  --color-inverse-on-surface: #12131c;
-  --color-on-tertiary-container: #495550;
-  --color-surface: #15121c;
-  --color-on-primary-fixed-variant: #9ba1ae;
-  --color-secondary: #9df7ef;
-  --color-primary-container: #5581ee;
-  --color-on-surface-variant: #b2b2b4;
-  --color-on-secondary-container: #c2cdcc;
-  --color-on-tertiary: #141414;
-  --color-surface-bright: #15121c;
-  --color-surface-dim: #191a1f;
-  --color-on-primary: #141414;
-  --color-on-primary-fixed: #d2d5db;
-  --color-on-background: #dddee0;
-  --color-surface-container-high: #12141c;
-  --color-tertiary: #b6f9e3;
-  --color-on-secondary: #141414;
-  --color-primary: #5c8bf2;
-  --color-inverse-surface: #c6c8cc;
-  --color-on-tertiary-fixed: #edf0ef;
-  --color-tertiary-fixed-dim: #2d8e64;
-  --color-primary-fixed-dim: #051043;
-  --color-tertiary-container: #9ef7db;
-  --color-tertiary-fixed: #107145;
-  --color-background: #15121c;
-  --color-error: #d95151;
-  --color-outline-variant: #303033;
-  --color-inverse-primary: #051043;
-  --color-secondary-fixed: #126e62;
-  --color-on-secondary-fixed: #edf1f0;
-  --color-outline: #808184;
-  --color-secondary-container: #157165;
-  --color-surface-container: #12141c;
-  --color-secondary-fixed-dim: #2f8c81;
-  --color-on-secondary-fixed-variant: #d3dbda;
-  --color-surface-container-low: #12131c;
-  --color-on-error: #141414;
-  --color-surface-container-highest: #13151b;
-  --color-on-error-container: #bdaeaf;
-  --color-on-primary-container: #18191d;
-  --color-surface-tint: #6f7994;
-  --watermark-line: rgba(200, 205, 230, 0.06);
+  --color-primary: #FA7B23;
+  --color-primary-container: #F96A0E;
+  --color-on-primary: #FFFFFF;
+  --color-on-primary-container: #FFFFFF;
+  --color-primary-fixed: #3D1800;
+  --color-primary-fixed-dim: #702D00;
+  --color-on-primary-fixed: #FFDBC6;
+  --color-on-primary-fixed-variant: #FFAA75;
+
+  --color-secondary: #F59E0B;
+  --color-secondary-container: #3E2405;
+  --color-on-secondary: #1F1202;
+  --color-on-secondary-container: #FDE68A;
+  --color-secondary-fixed: #452408;
+  --color-secondary-fixed-dim: #2D1603;
+  --color-on-secondary-fixed: #FEF3C7;
+  --color-on-secondary-fixed-variant: #FCD34D;
+
+  --color-tertiary: #10B981;
+  --color-tertiary-container: #064E3B;
+  --color-on-tertiary: #022C22;
+  --color-on-tertiary-container: #A7F3D0;
+  --color-tertiary-fixed: #064E3B;
+  --color-tertiary-fixed-dim: #047857;
+  --color-on-tertiary-fixed: #ECFDF5;
+  --color-on-tertiary-fixed-variant: #6EE7B7;
+
+  --color-surface: #0E1015;
+  --color-background: #090A0D;
+  --color-on-surface: #F3F4F6;
+  --color-on-background: #F3F4F6;
+  --color-on-surface-variant: #9CA3AF;
+
+  --color-surface-container-lowest: #141720;
+  --color-surface-container-low: #181C26;
+  --color-surface-container: #1E2330;
+  --color-surface-container-high: #252B3B;
+  --color-surface-container-highest: #2D3447;
+  --color-surface-variant: #1B202D;
+  --color-surface-bright: #283042;
+  --color-surface-dim: #10131A;
+
+  --color-inverse-surface: #E5E7EB;
+  --color-inverse-on-surface: #111827;
+  --color-inverse-primary: #B34400;
+
+  --color-outline: #6B7280;
+  --color-outline-variant: #252B3B;
+  --color-surface-tint: #FA7B23;
+
+  --color-error: #EF4444;
+  --color-error-container: #450A0A;
+  --color-on-error: #FFFFFF;
+  --color-on-error-container: #FCA5A5;
+
+  --watermark-line: rgba(249, 106, 14, 0.04);
   color-scheme: dark;
 }
 
 @layer base {
   body {
     @apply bg-surface text-on-surface;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }
 
@@ -121,10 +138,165 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  user-select: none;
 }
 
 .watermark-grid {
   background-size: 32px 32px;
   background-image: linear-gradient(to right, var(--watermark-line) 1px, transparent 1px),
     linear-gradient(to bottom, var(--watermark-line) 1px, transparent 1px);
+}
+
+/* =========================================================================
+   Liquid Glass Aesthetics
+   ========================================================================= */
+
+/* Primary Liquid Glass Button */
+.btn-liquid-glass {
+  position: relative;
+  background: linear-gradient(135deg, #F96A0E 0%, #FA7B23 45%, #E05300 100%);
+  color: #FFFFFF !important;
+  box-shadow: 
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1.5px 2px 0 rgba(0, 0, 0, 0.2),
+    0 4px 16px -2px rgba(249, 106, 14, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.btn-liquid-glass::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  transition: left 0.65s ease;
+  pointer-events: none;
+}
+
+.btn-liquid-glass:hover::before {
+  left: 220%;
+}
+
+.btn-liquid-glass:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 
+    inset 0 1px 2px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -1.5px 2px 0 rgba(0, 0, 0, 0.25),
+    0 8px 24px -2px rgba(249, 106, 14, 0.65);
+  background: linear-gradient(135deg, #FF7F2B 0%, #FA7215 50%, #D84D00 100%);
+}
+
+.btn-liquid-glass:active {
+  transform: translateY(0.5px);
+  box-shadow: 
+    inset 0 1px 1px 0 rgba(0, 0, 0, 0.2),
+    0 2px 8px -1px rgba(249, 106, 14, 0.35);
+}
+
+/* Secondary Liquid Glass Button (Frosted Translucent Glass) */
+.btn-liquid-glass-secondary {
+  position: relative;
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--color-on-surface);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.9),
+    0 2px 10px -2px rgba(0, 0, 0, 0.06);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.dark .btn-liquid-glass-secondary {
+  background: rgba(24, 28, 38, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.15),
+    0 2px 10px -2px rgba(0, 0, 0, 0.4);
+}
+
+.btn-liquid-glass-secondary:hover {
+  transform: translateY(-1.5px);
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(249, 106, 14, 0.4);
+  box-shadow: 
+    inset 0 1px 2px 0 rgba(255, 255, 255, 1),
+    0 6px 18px -2px rgba(249, 106, 14, 0.2);
+  color: var(--color-primary);
+}
+
+.dark .btn-liquid-glass-secondary:hover {
+  background: rgba(30, 35, 48, 0.9);
+  border-color: rgba(250, 123, 35, 0.4);
+  box-shadow: 
+    inset 0 1px 2px 0 rgba(255, 255, 255, 0.22),
+    0 6px 20px -2px rgba(249, 106, 14, 0.3);
+  color: #FA7B23;
+}
+
+.btn-liquid-glass-secondary:active {
+  transform: translateY(0.5px);
+}
+
+/* Glass Card / Panel */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
+}
+
+.dark .glass-panel {
+  background: rgba(20, 23, 32, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.45);
+}
+
+/* Smooth custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.4);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(249, 106, 14, 0.6);
+}
+
+.dashboard-scroll {
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(156, 163, 175, 0.65) transparent;
+}
+
+.dashboard-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.dashboard-scroll::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.65);
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }

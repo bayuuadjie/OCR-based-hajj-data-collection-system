@@ -3,8 +3,6 @@
 import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-
 type Profile = {
   username: string;
   name: string;
@@ -23,7 +21,7 @@ type Msg = { kind: "ok" | "error"; text: string } | null;
 type ThemeChoice = "light" | "dark" | "system";
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(path, {
     credentials: "include",
     headers: init?.body ? { "Content-Type": "application/json" } : undefined,
     ...init,
@@ -34,17 +32,17 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 const inputClass =
-  "w-full h-10 px-3 bg-surface rounded-lg border border-outline-variant text-body-sm text-on-surface placeholder:text-outline focus:border-primary-container focus:ring-1 focus:ring-primary-container focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed";
-const labelClass = "text-label-sm font-label-sm uppercase tracking-wide text-on-surface-variant";
+  "w-full h-11 px-3.5 bg-surface rounded-xl border border-outline-variant text-body-sm text-on-surface placeholder:text-outline focus:border-primary focus:ring-4 focus:ring-primary/15 focus:outline-none transition-all disabled:opacity-60 disabled:cursor-not-allowed";
+const labelClass = "text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant";
 const primaryBtn =
-  "h-10 px-space-base rounded-lg bg-primary-container text-on-primary hover:bg-primary text-label-lg font-label-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+  "btn-liquid-glass h-11 px-5 rounded-xl text-label-md font-semibold flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
 
 function Card({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
-    <section className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm p-space-base sm:p-space-lg">
-      <h2 className="text-title-md font-title-md text-on-surface">{title}</h2>
-      {description && <p className="text-label-md font-label-md text-on-surface-variant mt-0.5">{description}</p>}
-      <div className="mt-space-base">{children}</div>
+    <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-xs p-5 sm:p-6 transition-colors duration-200">
+      <h2 className="text-title-md font-bold font-headline-sm text-on-surface">{title}</h2>
+      {description && <p className="text-body-sm text-on-surface-variant mt-1">{description}</p>}
+      <div className="mt-4">{children}</div>
     </section>
   );
 }

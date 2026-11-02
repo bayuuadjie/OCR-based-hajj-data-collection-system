@@ -12,15 +12,15 @@ import ocrRouter from "./ocr";
 import { createSessionToken, verifySessionToken, SESSION_COOKIE_NAME } from "../lib/session";
 
 const app = express();
-const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
+const PORT = process.env.API_PORT ? Number(process.env.API_PORT) : 4000;
 
 // ─── Middleware global (harus sebelum semua route) ────────────────────────────
 app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: true,       // echo Origin header apa pun (jaringan lokal)
-    credentials: true,  // izinkan cookie lintas-origin
+    origin: true,
+    credentials: true,
   })
 );
 
@@ -35,8 +35,6 @@ const isProd = process.env.NODE_ENV === "production";
 const cookieOptions = {
   httpOnly: true,
   secure: isProd,
-  // "lax" aman di jaringan lokal selama frontend & API pakai IP/host yang sama.
-  // Kalau suatu saat pakai domain berbeda, ganti ke "none" + secure: true (HTTPS).
   sameSite: "lax" as const,
   path: "/",
   maxAge: 1000 * 60 * 60 * 8, // 8 jam

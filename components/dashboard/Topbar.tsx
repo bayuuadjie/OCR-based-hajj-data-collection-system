@@ -1,7 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import ThemeToggle from "@/components/ThemeToggle";
 
 function initialsOf(name: string) {
   const words = name
@@ -19,67 +18,50 @@ export default function Topbar({
   user: { name: string; role: "ADMIN" | "OPERATOR" };
   onMenuClick: () => void;
 }) {
-  const router = useRouter();
-  const [query, setQuery] = useState("");
-
-  function handleSearch(e: FormEvent) {
-    e.preventDefault();
-    const q = query.trim();
-    router.push(q ? `/dashboard?q=${encodeURIComponent(q)}` : "/dashboard");
-  }
-
   return (
-    <header className="w-full flex items-center justify-between gap-space-sm px-gutter-sm sm:px-gutter h-16 border-b border-outline-variant bg-surface-container-lowest z-10 flex-shrink-0">
-      <div className="flex items-center gap-space-sm flex-1 min-w-0">
+    <header className="w-full flex items-center justify-between gap-3 px-4 sm:px-6 h-16 border-b border-outline-variant bg-surface-container-lowest/80 backdrop-blur-md z-10 flex-shrink-0 transition-colors duration-200">
+      {/* Kiri: Tombol Menu Mobile & Judul Bagian */}
+      <div className="flex items-center gap-3 min-w-0">
         <button
           type="button"
           onClick={onMenuClick}
-          aria-label="Buka atau tutup menu"
-          title="Menu"
-          className="p-2 -ml-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors duration-150 shrink-0"
+          aria-label="Buka navigasi menu"
+          title="Buka Menu"
+          className="lg:hidden p-2 -ml-1 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors duration-150 shrink-0"
         >
-          <span className="material-symbols-outlined">menu</span>
+          <span className="material-symbols-outlined text-[22px]">menu</span>
         </button>
 
-        {/* Mobile: nama aplikasi singkat */}
-        <span className="sm:hidden text-label-lg font-label-lg font-bold text-primary truncate">
-          Pendataan Hajj &amp; Umrah
-        </span>
-
-        {/* Pencarian (sm ke atas) */}
-        <form onSubmit={handleSearch} className="hidden sm:flex items-center w-full max-w-md relative">
-          <span className="material-symbols-outlined absolute left-3 text-outline text-[18px] pointer-events-none">
-            search
-          </span>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cari nama, alamat, No. Porsi..."
-            className="w-full h-10 pl-10 pr-4 bg-surface text-on-surface rounded-lg border border-outline-variant text-body-md placeholder:text-outline focus:border-primary-container focus:ring-1 focus:ring-primary-container focus:outline-none transition-all duration-150"
-          />
-        </form>
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="hidden sm:flex w-2 h-2 rounded-full bg-primary" />
+          <div className="flex flex-col min-w-0">
+            <h1 className="text-sm sm:text-base font-bold font-headline-sm text-on-surface truncate leading-tight">
+              Sistem Pendataan Haji &amp; Umrah
+            </h1>
+            <span className="hidden sm:block text-[11px] text-on-surface-variant font-medium truncate">
+              Kementerian Haji &amp; Umrah Kabupaten Magetan
+            </span>
+          </div>
+        </div>
       </div>
 
-      <div className="flex items-center gap-space-sm shrink-0">
-        <button
-          type="button"
-          title="Notifikasi (segera hadir)"
-          className="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors duration-150"
-        >
-          <span className="material-symbols-outlined">notifications</span>
-        </button>
+      {/* Kanan: Theme Toggle, Notifikasi, User Avatar */}
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* Toggle Dark/Light Mode */}
+        <ThemeToggle />
 
-        <div className="h-6 w-px bg-outline-variant mx-1" />
+        <div className="h-6 w-px bg-outline-variant mx-0.5 sm:mx-1" />
 
-        <div className="flex items-center gap-space-sm">
-          <div className="w-9 h-9 rounded-lg bg-primary-container text-on-primary flex items-center justify-center text-label-md font-bold shadow-sm shrink-0">
+        {/* Profil Pengguna */}
+        <div className="flex items-center gap-1 pl-1">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-[#E05300] text-white flex items-center justify-center text-label-md font-bold shadow-sm shrink-0">
             {initialsOf(user.name)}
           </div>
-          <div className="hidden lg:flex flex-col text-left min-w-0">
-            <span className="text-label-md font-label-md font-semibold text-on-surface leading-tight truncate max-w-[180px]">
+          <div className="hidden mr-5 md:flex flex-col text-right min-w-0">
+            <span className="text-label-md font-semibold text-on-surface leading-tight truncate max-w-[160px]">
               {user.name}
             </span>
-            <span className="mt-0.5 inline-block w-fit px-1.5 rounded bg-surface-container-highest text-primary font-bold text-[10px] tracking-wider uppercase">
+            <span className="mt-0.5 inline-block w-fit px-1.5 py-0.2 rounded-md bg-primary/10 text-primary font-bold text-[10px] tracking-wider uppercase">
               {user.role === "ADMIN" ? "Admin" : "Operator"}
             </span>
           </div>

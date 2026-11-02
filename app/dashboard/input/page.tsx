@@ -7,8 +7,6 @@ import ComboField from "@/components/dashboard/ComboField";
 import { normalizeBank, normalizeDesa, normalizeKecamatan } from "@/lib/normalize";
 import DateField, { toIso } from "@/components/dashboard/DateField";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-
 type FieldKey =
   | "namaLengkap" | "namaAyah" | "jenisKelamin" | "tempatLahir" | "tanggalLahir" | "kecamatan"
   | "noTelepon" | "noPorsi" | "tanggalPorsi" | "namaBank" | "noRekening"
@@ -171,7 +169,7 @@ export default function InputDataPage() {
   previewsRef.current = previews;
 
   useEffect(() => {
-    fetch(`${API_URL}/api/jemaah/options`, { credentials: "include" })
+    fetch("/api/jemaah/options", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d && setOptions({ ...noOptions, ...d }))
       .catch(() => { });
@@ -243,7 +241,7 @@ export default function InputDataPage() {
     try {
       const body = new FormData();
       body.append("file", file);
-      const res = await fetch(`${API_URL}/api/ocr/${page}`, { method: "POST", body, credentials: "include" });
+      const res = await fetch(`/api/ocr/${page}`, { method: "POST", body, credentials: "include" });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message ?? "OCR gagal.");
 
@@ -316,7 +314,7 @@ export default function InputDataPage() {
     setSaveError(null);
     try {
       
-      const res = await fetch(`${API_URL}/api/jemaah`, {
+      const res = await fetch("/api/jemaah", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -707,21 +705,21 @@ export default function InputDataPage() {
       )}
 
       {/* Navigasi */}
-      <div className="flex items-center justify-between gap-space-sm pb-space-lg">
+      <div className="flex items-center justify-between gap-3 pb-6">
         <div>
           {step === 0 ? (
-            <Link href="/dashboard" className="h-10 px-space-base rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container text-label-lg font-label-lg transition-colors inline-flex items-center">
+            <Link href="/dashboard" className="btn-liquid-glass-secondary h-11 px-5 rounded-xl text-on-surface-variant text-label-lg font-semibold inline-flex items-center cursor-pointer">
               Batal
             </Link>
           ) : (
-            <button type="button" onClick={() => setStep(step - 1)} className="h-10 px-space-base rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container text-label-lg font-label-lg transition-colors">
+            <button type="button" onClick={() => setStep(step - 1)} className="btn-liquid-glass-secondary h-11 px-5 rounded-xl text-on-surface-variant text-label-lg font-semibold cursor-pointer">
               Kembali
             </button>
           )}
         </div>
         {step < 3 ? (
-          <button type="button" onClick={() => setStep(step + 1)} className="h-10 px-space-base rounded-lg bg-primary-container text-on-primary hover:bg-primary text-label-lg font-label-lg transition-colors flex items-center gap-1">
-            {step === 2 ? "Periksa" : "Lanjut"}
+          <button type="button" onClick={() => setStep(step + 1)} className="btn-liquid-glass h-11 px-6 rounded-xl text-label-lg font-semibold flex items-center gap-1.5 shadow-md cursor-pointer">
+            <span>{step === 2 ? "Periksa" : "Lanjut"}</span>
             <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
           </button>
         ) : (
@@ -729,7 +727,7 @@ export default function InputDataPage() {
             type="button"
             onClick={handleSave}
             disabled={saving || missingRequired.length > 0 || invalidDates.length > 0}
-            className="h-10 px-space-base rounded-lg bg-primary-container text-on-primary hover:bg-primary text-label-lg font-label-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-liquid-glass h-11 px-6 rounded-xl text-label-lg font-semibold shadow-md disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {saving ? "Menyimpan..." : "Simpan Data"}
           </button>

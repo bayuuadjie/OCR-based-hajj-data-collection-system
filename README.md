@@ -2,19 +2,13 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+Start the web app and API:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev:all
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The web app is available at [http://localhost:3000](http://localhost:3000). To open it from another device on the same Wi-Fi, find this computer's local IP address and visit `http://<IP-KOMPUTER>:3000` on that device. API requests are proxied by Next.js, so no IP address needs to be added to `.env`.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
