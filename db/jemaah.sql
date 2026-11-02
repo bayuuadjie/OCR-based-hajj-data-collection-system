@@ -23,5 +23,6 @@ CREATE TABLE IF NOT EXISTS jemaah (
 );
 
 CREATE INDEX IF NOT EXISTS idx_jemaah_tanggal_validasi ON jemaah (tanggal_validasi);
+CREATE INDEX IF NOT EXISTS idx_jemaah_tanggal_porsi ON jemaah (tanggal_porsi);
 CREATE INDEX IF NOT EXISTS idx_jemaah_kecamatan ON jemaah (kecamatan);
 CREATE INDEX IF NOT EXISTS idx_jemaah_pernah_haji ON jemaah (pernah_haji);

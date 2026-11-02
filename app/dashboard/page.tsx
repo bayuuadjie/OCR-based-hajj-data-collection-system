@@ -403,7 +403,7 @@ function DashboardContent() {
           </span>
           <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant border border-outline-variant text-label-sm font-label-sm">
             <span className="material-symbols-outlined text-[15px] text-primary">sort</span>
-            Urut: Tanggal Validasi &amp; Alamat
+            Urut: Tanggal Porsi &amp; Alamat
           </span>
         </div>
       </form>

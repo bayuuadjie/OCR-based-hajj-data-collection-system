@@ -60,8 +60,9 @@ const SELECT_COLUMNS = `
 
 // Diawali "jemaah." supaya yang diurutkan adalah kolom asli (tipe DATE), bukan alias teks
 // "dd/mm/yyyy" di query ekspor yang namanya sama.
+// Default: tanggal porsi terlama ke terbaru (ASC), jika sama kelompokkan berdasarkan alamat, lalu no porsi
 const ORDER_BY =
-  "ORDER BY jemaah.tanggal_validasi ASC NULLS LAST, jemaah.alamat ASC NULLS LAST, jemaah.nama_lengkap ASC";
+  "ORDER BY jemaah.tanggal_porsi ASC NULLS LAST, LOWER(TRIM(jemaah.alamat)) ASC NULLS LAST, jemaah.no_porsi ASC NULLS LAST, jemaah.nama_lengkap ASC";
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Susun WHERE dari query string. Dipakai bersama oleh daftar dan ekspor. */
@@ -167,7 +168,7 @@ function mergeSpellings(rows: { value: string; total: number }[], prefix: RegExp
       (row.total === g.best.total && g.best.value === g.best.value.toUpperCase() && row.value !== row.value.toUpperCase());
     if (better) g.best = row;
   }
-  return [...groups.values()]
+  return Array.from(groups.values())
     .sort((a, b) => b.total - a.total || a.best.value.localeCompare(b.best.value, "id"))
     .slice(0, 300)
     .map((g) => g.best.value);
