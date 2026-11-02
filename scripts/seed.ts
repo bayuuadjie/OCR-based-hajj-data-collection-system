@@ -13,32 +13,69 @@ type SeedAccount = {
 
 const accounts: SeedAccount[] = [
   {
-    username: "",
-    password: "",
-    name: "",
+    username: "admin",
+    password: "qwertyuiop",
+    name: "Administrator",
     role: "ADMIN",
-    email: "",
+    email: "admin@haji.go.id",
   },
   {
-    username: "",
-    password: "",
-    name: "",
+    username: "operator1",
+    password: "qwertyuiop",
+    name: "Operator 1",
     role: "OPERATOR",
-    email: "",
+    email: "operator1@haji.go.id",
+  },
+  {
+    username: "operator2",
+    password: "qwertyuiop",
+    name: "Operator 2",
+    role: "OPERATOR",
+    email: "operator2@haji.go.id",
   },
 ];
 
+function validateAccounts() {
+  const usernames = new Set<string>();
+  const emails = new Set<string>();
+
+  for (let index = 0; index < accounts.length; index += 1) {
+    const account = accounts[index];
+    const accountLabel = `Akun ke-${index + 1}`;
+    if (!account.username.trim() || !account.password || !account.name.trim()) {
+      throw new Error(
+        `${accountLabel}: isi username, password, dan name di scripts/seed.ts sebelum menjalankan seed.`
+      );
+    }
+    if (account.password.length < 8) {
+      throw new Error(`${accountLabel}: password minimal 8 karakter.`);
+    }
+    if (Buffer.byteLength(account.password, "utf8") > 72) {
+      throw new Error(`${accountLabel}: password melebihi 72 byte.`);
+    }
+    if (usernames.has(account.username)) {
+      throw new Error(`${accountLabel}: username "${account.username}" digunakan lebih dari sekali.`);
+    }
+    usernames.add(account.username);
+
+    const email = account.email?.trim();
+    if (email && emails.has(email)) {
+      throw new Error(`${accountLabel}: email "${email}" digunakan lebih dari sekali.`);
+    }
+    if (email) {
+      emails.add(email);
+    }
+  }
+}
 
 async function main() {
+  validateAccounts();
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
   try {
     await pool.query("ALTER TABLE operators ADD COLUMN IF NOT EXISTS active_session_id TEXT");
     await pool.query("ALTER TABLE operators ADD COLUMN IF NOT EXISTS active_session_expires_at TIMESTAMPTZ");
     for (const acc of accounts) {
-      if (Buffer.byteLength(acc.password, "utf8") > 72) {
-        throw new Error(`Password untuk akun "${acc.username}" melebihi 72 byte.`);
-      }
       const passwordHash = await bcrypt.hash(acc.password, 12);
       await pool.query(
         `INSERT INTO operators (id, username, email, name, password_hash, role)

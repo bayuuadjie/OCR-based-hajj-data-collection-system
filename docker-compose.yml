@@ -1,0 +1,60 @@
+services:
+  backend:
+    build: .
+    ports:
+      - "3000:3000"
+      - "4000:4000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      NODE_ENV: development
+      API_PORT: 4000
+      DATABASE_URL: postgresql://user:password@db:5432/data_haji
+      OCR_URL: http://ocr:8001
+      OCR_TOKEN: ${OCR_TOKEN:-}
+      SESSION_SECRET: ${SESSION_SECRET:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      ocr:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: data_haji
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/jemaah.sql:/docker-entrypoint-initdb.d/02-jemaah.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d data_haji"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ocr:
+    build:
+      context: ./ocr_service
+    environment:
+      OCR_TOKEN: ${OCR_TOKEN:-}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "from urllib.request import urlopen; urlopen('http://127.0.0.1:8001/health', timeout=3)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
