@@ -15,7 +15,7 @@ type FieldKey =
   | "pernahHaji" | "noValidasi" | "tanggalValidasi"
   | "alamat" | "pendidikan" | "pekerjaan";
 
-/** Format angka RT/RW menjadi 3 digit dengan leading zeros dan prefix, misal "2" → "RT.002" */
+/** Format angka RT/RW menjadi 3 digit dengan leading zeros dan prefix */
 function formatRtRw(prefix: "RT" | "RW", raw: string): string {
   const digits = raw.replace(/\D/g, "");
   if (!digits) return "";
@@ -27,8 +27,8 @@ function buildAlamat(rt: string, rw: string, desa: string): string {
   const parts: string[] = [];
   if (rt) parts.push(formatRtRw("RT", rt));
   if (rw) parts.push(formatRtRw("RW", rw));
-  if (desa.trim()) parts.push(desa.trim());
-  return parts.join(" ");
+  if (desa.trim()) parts.push(desa.trim().toUpperCase());
+  return parts.join(" ").toUpperCase();
 }
 
 type FormState = Record<FieldKey, string>;
@@ -39,7 +39,7 @@ type FieldDef = {
   key: FieldKey;
   label: string;
   kind?: "text" | "date" | "tel" | "select" | "textarea" | "combo";
-  optionsKey?: OptionKey; // untuk kind "combo": daftar pilihan dari data yang sudah ada
+  optionsKey?: OptionKey;
   options?: { value: string; label: string }[];
   required?: boolean;
   wide?: boolean;
@@ -99,10 +99,22 @@ const SHEETS: Sheet[] = [
 
 const ALL_FIELDS = SHEETS.flatMap((s) => s.fields);
 const DATE_KEYS = new Set<FieldKey>(["tanggalLahir", "tanggalPorsi", "tanggalValidasi"]);
+const UPPER_FIELDS = new Set<FieldKey>([
+  "namaLengkap",
+  "namaAyah",
+  "tempatLahir",
+  "kecamatan",
+  "namaBank",
+  "alamat",
+  "pendidikan",
+  "pekerjaan",
+]);
 const COMBO_NORMALIZE: Partial<Record<FieldKey | "desa", (value: string) => string>> = {
   kecamatan: normalizeKecamatan,
   namaBank: normalizeBank,
   desa: normalizeDesa,
+  pendidikan: (v: string) => v.trim().toUpperCase(),
+  pekerjaan: (v: string) => v.trim().toUpperCase(),
 };
 const noOptions: Record<OptionKey, string[]> = { kecamatan: [], namaBank: [], pendidikan: [], pekerjaan: [], desa: [] };
 
@@ -137,9 +149,9 @@ function displayValue(def: FieldDef, value: string): string {
 export default function InputDataPage() {
   const router = useRouter();
 
-  const [step, setStep] = useState(0); // 0..2 = lembar 1..3, 3 = periksa & simpan
+  const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(emptyForm);
-  // Sub-field alamat yang ditampilkan terpisah ke user
+  
   const [rt, setRt] = useState("");
   const [rw, setRw] = useState("");
   const [desa, setDesa] = useState("");
@@ -163,7 +175,7 @@ export default function InputDataPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d && setOptions({ ...noOptions, ...d }))
       .catch(() => { });
-    // Bebaskan URL preview saat halaman ditutup
+    
     return () => {
       Object.values(previewsRef.current).forEach((p) => p && URL.revokeObjectURL(p.url));
     };
@@ -171,10 +183,11 @@ export default function InputDataPage() {
 
   const setField = (key: FieldKey, value: string) => {
     if (key === "tanggalValidasi") {
-      validasiTouched.current = true; // operator mengubahnya sendiri: jangan ditimpa lagi
+      validasiTouched.current = true; // Ubah Manual
       setValidasiAuto(false);
     }
-    setForm((f) => ({ ...f, [key]: value }));
+    const val = UPPER_FIELDS.has(key) ? value.toUpperCase() : value;
+    setForm((f) => ({ ...f, [key]: val }));
   };
 
   /** Sync sub-field RT/RW/Desa → form.alamat setiap kali salah satu berubah */
@@ -199,14 +212,14 @@ export default function InputDataPage() {
     syncAlamat(rt, digits, desa);
   };
 
-  /** Handler Desa: sinkron ke alamat */
+  /** Handler Desa: ubah huruf besar, sinkron ke alamat */
   const handleDesaChange = (raw: string) => {
-    setDesa(raw);
-    syncAlamat(rt, rw, raw);
+    const upper = raw.toUpperCase();
+    setDesa(upper);
+    syncAlamat(rt, rw, upper);
   };
 
-  // Tanggal validasi biasanya hanya selisih beberapa hari dari tanggal porsi. Kalau di Lembar 2 belum
-  // terisi (OCR tidak terbaca), isi sementara dengan tanggal porsi supaya tinggal dikoreksi.
+  // Tanggal validasi isi sementara dengan tanggal porsi.
   useEffect(() => {
     if (step !== 1 || validasiTouched.current || !form.tanggalPorsi) return;
     if (form.tanggalValidasi === "" || (validasiAuto && form.tanggalValidasi !== form.tanggalPorsi)) {
@@ -241,9 +254,10 @@ export default function InputDataPage() {
         const next = { ...f };
         for (const [key, value] of Object.entries(found)) {
           if (!value || !pageKeys.has(key as FieldKey)) continue;
-          // OCR mengirim tanggal dd/mm/yyyy; type="date" menyimpan yyyy-mm-dd
           const converted = DATE_KEYS.has(key as FieldKey) ? toIso(value) : value;
-          if (converted) next[key as FieldKey] = converted;
+          if (converted) {
+            next[key as FieldKey] = UPPER_FIELDS.has(key as FieldKey) ? converted.toUpperCase() : converted;
+          }
         }
         return next;
       });
@@ -251,6 +265,8 @@ export default function InputDataPage() {
       if (sheet.page === 3 && found.alamat) {
         const mRt = found.alamat.match(/\bRT[.\s]*(\d+)/i);
         const mRw = found.alamat.match(/\bRW[.\s]*(\d+)/i);
+        const nextRt = mRt ? mRt[1] : rt;
+        const nextRw = mRw ? mRw[1] : rw;
         if (mRt) setRt(mRt[1]);
         if (mRw) setRw(mRw[1]);
 
@@ -265,6 +281,7 @@ export default function InputDataPage() {
         if (d && !/^(jl|jalan|komplek|komp)\b/i.test(d)) {
           d = normalizeDesa(d);
           setDesa(d);
+          syncAlamat(nextRt, nextRw, d);
         }
       }
       setOcr((o) => ({
@@ -291,23 +308,29 @@ export default function InputDataPage() {
 
   // ---- Validasi & simpan ----
   const missingRequired = ALL_FIELDS.filter((f) => f.required && !form[f.key].trim()).map((f) => f.label);
-  // type="date" hanya menghasilkan yyyy-mm-dd atau string kosong; tidak perlu validasi format manual
+ 
   const invalidDates: string[] = [];
 
   async function handleSave() {
     setSaving(true);
     setSaveError(null);
     try {
-      // Input date sudah menghasilkan yyyy-mm-dd; dikirim langsung ke server
+      
       const res = await fetch(`${API_URL}/api/jemaah`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          binBinti: form.namaAyah,
+          namaLengkap: form.namaLengkap.trim().toUpperCase(),
+          namaAyah: form.namaAyah.trim().toUpperCase(),
+          binBinti: form.namaAyah.trim().toUpperCase(),
+          tempatLahir: form.tempatLahir ? form.tempatLahir.trim().toUpperCase() : null,
+          alamat: form.alamat.trim().toUpperCase(),
           kecamatan: normalizeKecamatan(form.kecamatan),
           namaBank: normalizeBank(form.namaBank),
+          pendidikan: form.pendidikan ? form.pendidikan.trim().toUpperCase() : null,
+          pekerjaan: form.pekerjaan ? form.pekerjaan.trim().toUpperCase() : null,
         }),
       });
       const data = await res.json().catch(() => null);

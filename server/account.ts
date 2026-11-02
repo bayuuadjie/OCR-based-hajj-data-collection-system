@@ -18,10 +18,8 @@ declare module "express-serve-static-core" {
   }
 }
 
-/** Akun milik pengguna yang sedang login (halaman Pengaturan). */
 const router = Router();
 
-/** Wajib login dan akun masih aktif. Data akun diambil segar dari database. */
 async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const token = req.cookies?.[SESSION_COOKIE_NAME];
   if (!token) return res.status(401).json({ message: "Belum login." });
@@ -53,7 +51,6 @@ const toProfile = (a: Account) => ({
   createdAt: a.created_at,
 });
 
-/** Terbitkan ulang cookie sesi supaya nama di topbar langsung ikut berubah. */
 async function reissueSession(res: Response, a: Pick<Account, "id" | "username" | "name" | "role">) {
   const token = await createSessionToken({ sub: a.id, username: a.username, name: a.name, role: a.role });
   res.cookie(SESSION_COOKIE_NAME, token, {
@@ -61,7 +58,7 @@ async function reissueSession(res: Response, a: Pick<Account, "id" | "username" 
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 8 * 60 * 60 * 1000, // 8 jam, sama dengan masa berlaku token
+    maxAge: 8 * 60 * 60 * 1000, // 8 jam
   });
 }
 
@@ -102,8 +99,6 @@ router.patch("/profile", async (req, res) => {
   }
 });
 
-// POST /api/account/password  { currentPassword, newPassword }
-// Batasi tebakan password lama: maks. 5 salah per 15 menit per akun (disimpan di memori server).
 const MAX_FAILS = 5;
 const WINDOW_MS = 15 * 60 * 1000;
 const failures = new Map<string, { count: number; resetAt: number }>();
@@ -136,7 +131,6 @@ router.post("/password", async (req, res) => {
   if (next.length < 8) {
     return res.status(400).json({ message: "Password baru minimal 8 karakter." });
   }
-  // bcrypt hanya memakai 72 byte pertama; tolak yang lebih panjang agar tidak terpotong diam-diam
   if (Buffer.byteLength(next, "utf8") > 72) {
     return res.status(400).json({ message: "Password baru terlalu panjang (maksimal 72 karakter)." });
   }
@@ -169,7 +163,7 @@ router.post("/password", async (req, res) => {
   }
 });
 
-// GET /api/account/system  (khusus admin): status database & layanan OCR + peringatan konfigurasi
+// khusus admin: status database & layanan OCR + peringatan konfigurasi
 router.get("/system", async (req, res) => {
   if (req.account?.role !== "ADMIN") {
     return res.status(403).json({ message: "Hanya admin yang boleh melihat status sistem." });

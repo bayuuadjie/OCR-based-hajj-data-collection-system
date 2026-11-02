@@ -122,7 +122,7 @@ function DashboardContent() {
 
   const [draft, setDraft] = useState<Filters>(emptyFilters);
   const [applied, setApplied] = useState<Filters>(emptyFilters);
-  const [showFilters, setShowFilters] = useState(false); // hanya berpengaruh di mobile
+  const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(25);
 
@@ -135,7 +135,7 @@ function DashboardContent() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  // Sinkronkan pencarian dari kolom cari di Topbar (?q=...)
+  // Pencarian dari kolom cari di Topbar (?q=...)
   useEffect(() => {
     setDraft((d) => (d.q === urlQ ? d : { ...d, q: urlQ }));
     setApplied((a) => (a.q === urlQ ? a : { ...a, q: urlQ }));
@@ -188,7 +188,6 @@ function DashboardContent() {
   async function handleExport() {
     setExporting(true);
     try {
-      // Ekspor semua data yang cocok dengan filter yang sedang diterapkan (bukan hanya halaman ini)
       const res = await fetch(`${API_URL}/api/jemaah/export?${filterParams(applied)}`, {
         credentials: "include",
       });
@@ -215,7 +214,6 @@ function DashboardContent() {
     if (!window.confirm(`Hapus data "${j.namaLengkap}"? Tindakan ini tidak bisa dibatalkan.`)) return;
     try {
       await api(`/api/jemaah/${j.id}`, { method: "DELETE" });
-      // Kalau yang dihapus satu-satunya baris di halaman ini, mundur satu halaman
       if (rows.length === 1 && page > 1) setPage(page - 1);
       else await load();
     } catch (err) {
@@ -227,7 +225,6 @@ function DashboardContent() {
   const startNo = total === 0 ? 0 : (page - 1) * limit + 1;
   const endNo = Math.min(page * limit, total);
 
-  // Jumlah filter lanjutan yang aktif (untuk badge di tombol "Filter" mobile)
   const activeAdvanced = [
     applied.pernahHaji !== "all",
     applied.kecamatan !== "",
@@ -276,7 +273,7 @@ function DashboardContent() {
         className="bg-surface-container-lowest rounded-xl border border-outline-variant p-space-base shadow-sm space-y-space-base"
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-space-base">
-          {/* Pencarian + tombol Filter (mobile) */}
+          {/* Pencarian + tombol Filter */}
           <div className="sm:col-span-2 lg:col-span-6 flex flex-col gap-1">
             <label htmlFor="f-q" className={labelClass}>
               Pencarian

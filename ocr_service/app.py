@@ -12,17 +12,17 @@ from pytesseract import Output
 
 from extract import PAGES, expected_missing, extract_fields
 
-try:  # PDF opsional (PyMuPDF; nama modul baru "pymupdf", yang lama "fitz")
+try:
     import pymupdf as fitz
-except ImportError:  # pragma: no cover
+except ImportError:
     try:
         import fitz
     except ImportError:
         fitz = None
 
-OCR_TOKEN = os.environ.get("OCR_TOKEN")  # rahasia bersama dengan server Express
+OCR_TOKEN = os.environ.get("OCR_TOKEN")
 MAX_BYTES = 15 * 1024 * 1024
-Image.MAX_IMAGE_PIXELS = 120_000_000  # cegah "decompression bomb"
+Image.MAX_IMAGE_PIXELS = 120_000_000
 
 BILINEAR = Image.Resampling.BILINEAR
 BICUBIC = Image.Resampling.BICUBIC
@@ -78,11 +78,6 @@ def load_image(data: bytes) -> Image.Image:
 
 
 def estimate_skew(gray: Image.Image) -> float:
-    """
-    Perkirakan kemiringan (derajat) dengan profil proyeksi: pada sudut yang tepat, baris teks
-    sejajar sehingga jumlah piksel gelap per baris paling "bergelombang" (varians terbesar).
-    Hanya memakai Pillow, tanpa numpy/OpenCV.
-    """
     small = gray.copy()
     small.thumbnail((700, 700))
     bw = small.point([0 if value < 150 else 255 for value in range(256)])
@@ -131,11 +126,6 @@ def preprocess(img: Image.Image) -> Image.Image:
 
 
 def words_to_lines(words: list[tuple[str, int, int, int, int]]) -> list[str]:
-    """
-    Gabungkan kata-kata yang sejajar secara vertikal menjadi satu baris, urut dari kiri.
-    Lebih tahan terhadap formulir berbentuk tabel (label dan isi beda sel) dibanding
-    pengelompokan baris bawaan Tesseract.
-    """
     if not words:
         return []
     median_h = statistics.median(h for _, _, _, _, h in words)

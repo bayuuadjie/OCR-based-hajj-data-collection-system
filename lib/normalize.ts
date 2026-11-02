@@ -7,54 +7,43 @@ export function canonical(value: string): string {
     .replace(/^(bank|kecamatan|kec|desa|kelurahan|kel|dusun|dsn) /, "");
 }
 
-/** "KEC. CIBIRU" / "Kecamatan Cibiru" / "cibiru" -> "Cibiru" (hapus awalan kec./kecamatan, rapikan kapital). */
+/** "KEC. CIBIRU" / "Kecamatan Cibiru" / "cibiru" -> "CIBIRU" (hapus awalan kec./kecamatan, huruf besar). */
 export function normalizeKecamatan(value: string): string {
   const name = value
     .replace(/^\s*(kecamatan|kec)\b\.?\s*/i, "")
     .replace(/\s+/g, " ")
     .trim();
-  if (!name) return "";
-  return name.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+  return name.toUpperCase();
 }
 
-/** "Desa Sindangjaya" / "sindangjaya" -> "Sindangjaya" (hapus awalan desa/kelurahan, rapikan kapital). */
+/** "Desa Sindangjaya" / "sindangjaya" -> "SINDANGJAYA" (hapus awalan desa/kelurahan/dusun, huruf besar). */
 export function normalizeDesa(value: string): string {
   const name = value
     .replace(/^\s*(desa|kelurahan|kel|dusun|dsn)\b\.?\s*/i, "")
     .replace(/\s+/g, " ")
     .trim();
-  if (!name) return "";
-  return name.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+  return name.toUpperCase();
 }
 
 const BANKS: Record<string, string> = {
-  bsi: "Syariah Indonesia",
-  "syariah indonesia": "Syariah Indonesia",
-  bni: "Negara Indonesia",
-  bri: "Rakyat Indonesia",
-  bca: "Central Asia",
-  btn: "Tabungan Negara",
+  bsi: "SYARIAH INDONESIA",
+  "syariah indonesia": "SYARIAH INDONESIA",
+  bni: "NEGARA INDONESIA",
+  bri: "RAKYAT INDONESIA",
+  bca: "CENTRAL ASIA",
+  btn: "TABUNGAN NEGARA",
   bjb: "BJB",
-  mandiri: "Mandiri",
-  muamalat: "Muamalat",
+  mandiri: "MANDIRI",
+  muamalat: "MUAMALAT",
 };
 
-const BANK_ACRONYMS = new Set(["CIMB", "BTPN", "OCBC", "BPRS"]); // singkatan 4 huruf; yang 2-3 huruf otomatis
-
-/** "bank cimb niaga" / "CIMB NIAGA" -> "CIMB Niaga" (hapus awalan 'bank', rapikan kapital). */
+/** "bank cimb niaga" / "CIMB NIAGA" -> "CIMB NIAGA" (hapus awalan 'bank', huruf besar). */
 export function normalizeBank(value: string): string {
   const rest = value.replace(/\s+/g, " ").trim().replace(/^bank\s+/i, "");
   if (!rest) return "";
   const mapped = BANKS[rest.toLowerCase()];
   if (mapped) return mapped;
-  const pretty = rest
-    .split(" ")
-    .map((w) => {
-      const acronym = /^[A-Za-z]+$/.test(w) && w === w.toUpperCase() && (w.length <= 3 || BANK_ACRONYMS.has(w));
-      return acronym ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-    })
-    .join(" ");
-  return pretty;
+  return rest.toUpperCase();
 }
 
 /** Pilihan yang penulisannya setara dengan `value` (abaikan huruf besar/kecil dan awalan), atau null. */

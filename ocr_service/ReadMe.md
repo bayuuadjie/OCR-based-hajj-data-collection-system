@@ -1,7 +1,5 @@
 # Layanan OCR (Python + Tesseract)
 
-Berjalan di komputer yang sama dengan server Express. Tidak ada data yang keluar ke internet.
-
 ## Pasang (sekali saja, Linux Mint)
 
 ```bash

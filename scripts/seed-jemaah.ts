@@ -49,7 +49,26 @@ async function main() {
            no_rekening, no_validasi, no_porsi, tanggal_validasi, tanggal_porsi
          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
          ON CONFLICT (no_porsi) DO NOTHING`,
-        [randomUUID(), ...r]
+        [
+          randomUUID(),
+          r[0].toUpperCase(),
+          r[1].toUpperCase(),
+          r[2].toUpperCase(),
+          r[3].toUpperCase(),
+          r[4],
+          r[5].toUpperCase(),
+          r[6],
+          r[7],
+          r[8].toUpperCase(),
+          r[9].toUpperCase(),
+          r[10],
+          r[11].toUpperCase(),
+          r[12],
+          r[13],
+          r[14],
+          r[15],
+          r[16],
+        ]
       );
       inserted += result.rowCount ?? 0;
     }

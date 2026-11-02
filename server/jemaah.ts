@@ -130,7 +130,7 @@ router.get("/", async (req, res) => {
 router.get("/kecamatan", async (_req, res) => {
   try {
     const result = await pool.query(
-      `SELECT DISTINCT kecamatan FROM jemaah WHERE kecamatan IS NOT NULL ORDER BY kecamatan`
+      `SELECT DISTINCT upper(trim(kecamatan)) AS kecamatan FROM jemaah WHERE kecamatan IS NOT NULL AND trim(kecamatan) <> '' ORDER BY 1`
     );
     res.json({ kecamatan: result.rows.map((r) => r.kecamatan) });
   } catch (err) {
@@ -163,15 +163,21 @@ function mergeSpellings(rows: { value: string; total: number }[], prefix: RegExp
       continue;
     }
     g.total += row.total;
-    const better =
-      row.total > g.best.total ||
-      (row.total === g.best.total && g.best.value === g.best.value.toUpperCase() && row.value !== row.value.toUpperCase());
-    if (better) g.best = row;
+    if (row.total > g.best.total) g.best = row;
   }
-  return Array.from(groups.values())
-    .sort((a, b) => b.total - a.total || a.best.value.localeCompare(b.best.value, "id"))
-    .slice(0, 300)
-    .map((g) => g.best.value);
+  const seen = new Set<string>();
+  const list: string[] = [];
+  const sorted = Array.from(groups.values())
+    .sort((a, b) => b.total - a.total || a.best.value.localeCompare(b.best.value, "id"));
+  for (const g of sorted) {
+    const upper = g.best.value.toUpperCase().replace(/\s+/g, " ").trim();
+    if (upper && !seen.has(upper)) {
+      seen.add(upper);
+      list.push(upper);
+      if (list.length >= 300) break;
+    }
+  }
+  return list;
 }
 
 /** Ekstrak nama desa/kelurahan dari kolom alamat untuk rekomendasi pilihan desa */
@@ -200,8 +206,8 @@ function extractDesa(alamat: string): string | null {
   if (/^(jl|jalan|komplek|komp|gang|gg)\b/i.test(cleaned)) return null;
   if (/\bno\b\.?\s*\d+/i.test(cleaned)) return null;
 
-  // Format huruf kapital di awal setiap kata
-  return cleaned.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+  // Format huruf besar semua
+  return cleaned.toUpperCase();
 }
 
 router.get("/options", async (_req, res) => {
@@ -275,6 +281,7 @@ router.get("/export", async (req, res) => {
 
 // ---- Tambah data jemaah baru (dari form Input Data Baru) ----
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+const strUpper = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim().toUpperCase() : null);
 
 /** null = kosong, undefined = format salah, selain itu tanggal ISO valid (YYYY-MM-DD). */
 function isoDate(v: unknown): string | null | undefined {
@@ -287,12 +294,12 @@ function isoDate(v: unknown): string | null | undefined {
 
 router.post("/", async (req, res) => {
   const b = req.body ?? {};
-  const binBinti = str(b.binBinti) ?? str(b.namaAyah);
+  const binBinti = strUpper(b.binBinti) ?? strUpper(b.namaAyah);
 
   const required: [string, string | null][] = [
-    ["Nama", str(b.namaLengkap)],
+    ["Nama", strUpper(b.namaLengkap)],
     ["Nama ayah (Bin/Binti)", binBinti],
-    ["Alamat", str(b.alamat)],
+    ["Alamat", strUpper(b.alamat)],
     ["Nomor porsi", str(b.noPorsi)],
   ];
   const missing = required.filter(([, v]) => !v).map(([label]) => label);
@@ -329,10 +336,25 @@ router.post("/", async (req, res) => {
        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
        RETURNING id`,
       [
-        randomUUID(), str(b.namaLengkap), binBinti, str(b.alamat), str(b.kecamatan),
-        str(b.noTelepon), str(b.tempatLahir), tanggalLahir, pernahHaji, str(b.pekerjaan),
-        str(b.pendidikan), jenisKelamin, str(b.namaBank), str(b.noRekening),
-        str(b.noValidasi), str(b.noPorsi), tanggalValidasi, tanggalPorsi, req.user?.sub ?? null,
+        randomUUID(),
+        strUpper(b.namaLengkap),
+        binBinti,
+        strUpper(b.alamat),
+        strUpper(b.kecamatan),
+        str(b.noTelepon),
+        strUpper(b.tempatLahir),
+        tanggalLahir,
+        pernahHaji,
+        strUpper(b.pekerjaan),
+        strUpper(b.pendidikan),
+        jenisKelamin,
+        strUpper(b.namaBank),
+        str(b.noRekening),
+        str(b.noValidasi),
+        str(b.noPorsi),
+        tanggalValidasi,
+        tanggalPorsi,
+        req.user?.sub ?? null,
       ]
     );
     res.status(201).json({ id: result.rows[0].id, message: "Data jemaah disimpan." });

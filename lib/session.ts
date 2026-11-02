@@ -7,12 +7,10 @@ if (!secretEnv && process.env.NODE_ENV === "production") {
   throw new Error("SESSION_SECRET belum di-set di environment variable.");
 }
 
-// Fallback dev-only supaya `npm run dev` tetap jalan tanpa setup .env dulu.
-// JANGAN andalkan fallback ini di produksi — selalu set SESSION_SECRET sendiri.
 const secret = new TextEncoder().encode(secretEnv ?? "dev-only-insecure-secret-change-me");
 
 export type SessionPayload = {
-  sub: string; // operator id
+  sub: string;
   username: string;
   name: string;
   role: "ADMIN" | "OPERATOR";

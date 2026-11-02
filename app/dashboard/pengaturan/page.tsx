@@ -159,7 +159,7 @@ export default function PengaturanPage() {
       setName(res.profile.name);
       setEmail(res.profile.email ?? "");
       setProfileMsg({ kind: "ok", text: res.message });
-      router.refresh(); // muat ulang agar nama di pojok kanan atas ikut berubah
+      router.refresh();
     } catch (err) {
       setProfileMsg({ kind: "error", text: err instanceof Error ? err.message : "Gagal menyimpan." });
     } finally {

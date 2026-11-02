@@ -28,17 +28,12 @@ def clean_text(value: str) -> str:
 
 
 def digits_only(value: str) -> str:
-    """Untuk kolom angka: perbaiki salah baca huruf->angka lalu buang selain angka."""
     return re.sub(r"\D", "", (value or "").translate(_DIGIT_FIX))
 
 
 def find_long_number(line: str) -> str:
-    """
-    Angka panjang 9-12 digit (nomor porsi) di satu baris, atau "". Dipakai untuk nilai yang
-    tidak punya label. Tanggal angka (8 digit) dan nomor lain yang pendek tidak ikut terbaca.
-    """
     for m in re.finditer(r"(?<![A-Za-z])[0-9OoIl|]{9,12}(?![A-Za-z])", line or ""):
-        if sum(c.isdigit() for c in m.group()) >= 6:  # bukan sekadar rentetan "llll"
+        if sum(c.isdigit() for c in m.group()) >= 6:
             return digits_only(m.group())
     return ""
 
@@ -47,12 +42,10 @@ def norm_phone(value: str) -> str:
     d = digits_only(value)
     if d.startswith("62"):
         d = "0" + d[2:]
-    # Nomor HP Indonesia = 08 + 8-11 digit. Titik dua yang salah baca jadi "1" dan menempel di depan
-    # ("1085706051232") ikut terbuang.
     m = re.search(r"08\d{8,11}", d)
     if m:
         d = m.group()
-    return d if len(d) >= 9 else ""  # terlalu pendek = bukan nomor telepon (mis. potongan nomor KTP)
+    return d if len(d) >= 9 else ""
 
 
 def _valid_iso(y: int, m: int, d: int) -> str:
@@ -74,13 +67,12 @@ def _month_of(token: str) -> int | None:
     t = token.lower().strip(".")
     if t in MONTHS:
         return MONTHS[t]
-    if len(t) < 4:  # singkatan 3 huruf harus persis
+    if len(t) < 4:
         return None
     best: dict[int, float] = {}
     for name in _MONTH_NAMES:
         best[MONTHS[name]] = max(best.get(MONTHS[name], 0), fuzz.ratio(t, name))
     ranked = sorted(best.items(), key=lambda kv: kv[1], reverse=True)
-    # Harus cukup mirip DAN jelas lebih mirip satu bulan dibanding bulan lain (Juni vs Juli)
     if ranked[0][1] >= 75 and ranked[0][1] > ranked[1][1]:
         return ranked[0][0]
     return None
@@ -99,7 +91,6 @@ def _parse_iso(value: str) -> str:
     if not s:
         return ""
 
-    # Dengan nama bulan: "07 Juni 2022", "7-Jun-22", "07Juni2022", "O7 Juni 2O22"
     for m in re.finditer(r"[A-Za-z]{3,10}", s):
         month = _month_of(m.group())
         if month is None:
@@ -111,15 +102,12 @@ def _parse_iso(value: str) -> str:
             if iso:
                 return iso
 
-    # Angka: buang salah baca huruf->angka (O->0, l->1) lalu cari pola tanggal
     t = s.translate(_DIGIT_FIX)
 
-    m = re.search(r"(\d{4})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{1,2})", t)  # 1999-06-07
+    m = re.search(r"(\d{4})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{1,2})", t)
     if m:
         return _valid_iso(int(m.group(1)), int(m.group(2)), int(m.group(3)))
 
-    # 07/06/1999 (tahun 4 digit dicoba dulu), lalu 07/06/99. Semua kecocokan dicoba
-    # karena titik dua yang salah baca jadi "1" bisa menggeser kecocokan pertama.
     for pattern in (r"(\d{1,2})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{4})(?!\d)",
                     r"(\d{1,2})\s*[-/.\s]\s*(\d{1,2})\s*[-/.\s]\s*(\d{4}|\d{2})(?!\d)"):
         for m in re.finditer(pattern, t):
@@ -130,14 +118,13 @@ def _parse_iso(value: str) -> str:
             if iso:
                 return iso
 
-    m = re.search(r"(?<!\d)(\d{2})(\d{2})(\d{4})(?!\d)", t)  # 07061999 (tanpa pemisah)
+    m = re.search(r"(?<!\d)(\d{2})(\d{2})(\d{4})(?!\d)", t)
     if m:
         return _valid_iso(int(m.group(3)), int(m.group(2)), int(m.group(1)))
     return ""
 
 
 def parse_date(value: str) -> str:
-    """Tanggal dalam bentuk apa pun -> dd/mm/yyyy (mis. "07 Juni 2022" -> "07/06/2022"), atau ""."""
     iso = _parse_iso(value)
     if not iso:
         return ""
@@ -164,7 +151,6 @@ def norm_pernah_haji(value: str) -> str:
 
 
 def norm_rtrw(value: str) -> str:
-    """"004/002" / "RT 04 / RW 02" -> "RT 004/RW 002" (salah baca O/l di angka diperbaiki)."""
     nums = re.findall(r"(?<![A-Za-z])[0-9OoIl|]{1,4}(?![A-Za-z])", value or "")
     nums = [n.translate(_NUMFIX) for n in nums]
     if len(nums) >= 2:
@@ -185,11 +171,10 @@ _BANKS = {
 }
 
 
-_BANK_ACRONYMS = {"CIMB", "BTPN", "OCBC", "BPRS"}  # singkatan 4 huruf (yang 2-3 huruf otomatis dianggap singkatan)
+_BANK_ACRONYMS = {"CIMB", "BTPN", "OCBC", "BPRS"}
 
 
 def _pretty_bank(name: str) -> str:
-    """Singkatan kapital dipertahankan (CIMB, BCA, BPD); kata lain diawali huruf besar (JAWA -> Jawa)."""
     words = []
     for w in name.split():
         keep = w.isalpha() and w.isupper() and (len(w) <= 3 or w in _BANK_ACRONYMS)
@@ -205,7 +190,6 @@ def norm_bank(value: str) -> str:
 
 
 def norm_father(value: str) -> str:
-    """Nama ayah tanpa awalan Bin/Binti (awalan ditambahkan di form sesuai jenis kelamin)."""
     return clean_text(re.sub(r"^\s*(binti|bin|bn|bt)\b\.?", "", value or "", flags=re.I))
 
 
@@ -216,18 +200,17 @@ def norm_father(value: str) -> str:
 
 @dataclass(frozen=True)
 class Spec:
-    key: str  # sama dengan nama kolom di form frontend (camelCase)
-    aliases: tuple[str, ...]  # tulisan label yang mungkin muncul di formulir
+    key: str
+    aliases: tuple[str, ...]
     normalize: Callable[[str], str] = clean_text
-    optional: bool = False  # tidak dianggap "tidak terbaca" kalau kosong
-    fallback: tuple[str, ...] = ()  # label cadangan: dicoba hanya kalau `aliases` tidak menemukan apa-apa
-    below: tuple[str, ...] = ()  # kata/judul yang nilainya ada di baris-baris DI BAWAHNYA (tanpa label)
-    below_lines: int = 3  # berapa baris di bawah judul yang dicari
-    pick: Callable[[str], str] | None = None  # pengambil nilai dari satu baris (untuk `below`)
+    optional: bool = False
+    fallback: tuple[str, ...] = ()
+    below: tuple[str, ...] = ()
+    below_lines: int = 3
+    pick: Callable[[str], str] | None = None
 
 
 PAGES: dict[int, list[Spec]] = {
-    # Lembar 1: data diri, porsi, bank
     1: [
         Spec("namaLengkap", ("nama", "nama lengkap", "nama jemaah", "nama calon jemaah")),
         Spec("namaAyah", ("nama ayah kandung", "nama ayah", "ayah kandung", "bin/binti", "bin binti", "nama orang tua"), norm_father),
@@ -236,38 +219,31 @@ PAGES: dict[int, list[Spec]] = {
         Spec("tanggalLahir", ("tanggal lahir", "tgl lahir", "tgl. lahir"), parse_date),
         Spec("kecamatan", ("kecamatan", "kec"), norm_kecamatan),
         Spec("noTelepon", ("no handphone", "no. handphone", "nomor handphone", "nomor hp", "no hp", "no. hp", "nomor telepon", "no telepon", "no telp", "nomor wa", "telepon", "hp"), norm_phone),
-        # Di dokumen, nomor porsi TIDAK berlabel: angkanya ada di bawah judul "Kementerian Haji dan Umrah".
         Spec("noPorsi", (), digits_only, below=("kementerian haji dan umrah",), pick=find_long_number,
              fallback=("nomor porsi", "no porsi", "no. porsi", "porsi")),
-        # Di dokumen, tanggal porsi ada di sebelah tulisan "Kab. Magetan," (tanpa label tanggal).
         Spec("tanggalPorsi", ("kab. magetan", "kab magetan", "kabupaten magetan"), parse_date,
              fallback=("tanggal porsi", "tgl porsi", "tanggal set", "tanggal setor", "tgl set", "tgl setor")),
         Spec("namaBank", ("bank", "nama bank"), norm_bank),
         Spec("noRekening", ("nomor rekening", "no rekening", "no. rekening", "no rek", "rekening"), digits_only),
     ],
-    # Lembar 2: status haji & validasi
+    
     2: [
         Spec("pernahHaji", ("status haji", "pernah haji", "sudah haji", "pergi haji"), norm_pernah_haji, optional=True),
         Spec("noValidasi", ("nomor validasi", "no validasi", "no. validasi", "validasi"), digits_only),
         Spec("tanggalValidasi", ("tanggal transaksi", "tgl transaksi", "tanggal validasi", "tgl validasi"), parse_date),
     ],
-    # Lembar 3: alamat = gabungan label "RT/RW" dan "Desa/Kelurahan".
-    # (Pendidikan & pekerjaan sengaja tidak di-OCR: datanya dari KK dan isinya beberapa orang.)
-    # Kunci berawalan "_" hanya bahan; hasil akhirnya satu kolom "alamat".
+    
     3: [
         Spec("_rtrw", ("rt/rw", "rt / rw", "rt rw", "rtrw"), norm_rtrw),
         Spec("_desa", ("desa/kelurahan", "desa / kelurahan", "desa kelurahan", "kelurahan/desa", "kel/desa", "kelurahan", "desa")),
     ],
 }
 
-# Baris berlabel ini ada di dokumen tapi bukan kolom kita. Tanpa daftar ini, "NOMOR KTP ..." bisa
-# dicocokkan (fuzzy) ke "nomor hp" dan mengisinya dengan angka KTP.
 _IGNORED_LABELS = (
     "nomor ktp", "no ktp", "no. ktp", "nik", "kode pos", "provinsi", "kabupaten/kodya", "kabupaten kodya",
     "email", "e-mail", "status perkawinan", "pekerjaan", "pendidikan",
 )
 
-# Beberapa formulir menulis "Tempat/Tanggal Lahir : Bandung, 14-08-1972" dalam satu baris.
 _TTL_ALIASES = ("tempat tanggal lahir", "tempat tgl lahir", "tempat dan tanggal lahir", "ttl", "tempat/tanggal lahir")
 
 # --------------------------------------------------------------------------- #
@@ -332,7 +308,7 @@ def _match_at(line: str, specs: list[tuple[str, tuple[str, ...]]]) -> _Match | N
         if best is None or (cand.score, cand.alias_len) > (best.score, best.alias_len):
             best = cand
 
-    # 1) Ada pemisah ":" / ";" / "=" -> label di kiri, isi di kanan
+    # 1) Ada pemisah ":" / ";" / "="
     m = re.search(r"[:;=]", line)
     if m:
         label, value = line[: m.start()], line[m.end():]
@@ -341,7 +317,7 @@ def _match_at(line: str, specs: list[tuple[str, tuple[str, ...]]]) -> _Match | N
                 for alias in aliases:
                     consider(key, alias, fuzz.ratio(_n(label), _n(alias)), value)
 
-    # 2) Tanpa pemisah (sel tabel) -> beberapa kata pertama adalah label
+    # 2) Tanpa pemisah
     tokens = line.split()
     for key, aliases in specs:
         for alias in aliases:
@@ -355,8 +331,6 @@ def _match_at(line: str, specs: list[tuple[str, tuple[str, ...]]]) -> _Match | N
 
 
 def _is_heading(line: str, phrase: str) -> bool:
-    """Baris ini memuat judul `phrase` (toleran salah baca). Baris pendek tidak dihitung:
-    kalau tidak, satu huruf "a" pun "ada di dalam" kalimat panjang."""
     a, b = _n(line), _n(phrase)
     return len(a) >= 0.7 * len(b) and fuzz.partial_ratio(a, b) >= 88
 
@@ -368,12 +342,9 @@ def output_keys(page: int) -> list[str]:
 
 
 def _extract(page: int, lines: list[str]) -> tuple[dict[str, str], set[str]]:
-    """Hasil kolom + daftar kunci bahan (termasuk RT/RW dan Desa terpisah) yang berhasil terbaca."""
     specs = PAGES[page]
     by_key = {s.key: s for s in specs}
 
-    # Semua label ikut dicocokkan sekaligus supaya satu baris selalu "milik" kolom yang paling cocok
-    # (label cadangan diberi awalan "fb:"); tahap menentukan label mana yang boleh mengisi nilai.
     ttl = [("_ttl", _TTL_ALIASES)] if page == 1 else []
     every_label = (
         [(s.key, s.aliases) for s in specs if s.aliases]
@@ -419,7 +390,6 @@ def _extract(page: int, lines: list[str]) -> tuple[dict[str, str], set[str]]:
             if len(tokens) > 1 and tokens[0] in {"1", "|", "!", ".", ",", "-", "_", "~"}:
                 value = " ".join(tokens[1:])  # titik dua yang salah baca
 
-            # Isi ada di baris berikutnya (label berdiri sendiri, mis. "Tanggal Set." lalu tanggalnya di bawah)
             took_next = False
             if not value and i + 1 < len(clean_lines) and not is_label_line(clean_lines[i + 1]):
                 value = clean_lines[i + 1]
@@ -437,7 +407,7 @@ def _extract(page: int, lines: list[str]) -> tuple[dict[str, str], set[str]]:
     # Tahap 1: label utama
     scan(fallback_stage=False)
 
-    # Tahap 2: nilai yang ada DI BAWAH sebuah judul (mis. nomor porsi di bawah "Kementerian Haji dan Umrah")
+    # Tahap 2: nilai yang ada DI BAWAH sebuah judul
     for spec in specs:
         if not spec.below or normalized.get(spec.key):
             continue
@@ -446,7 +416,7 @@ def _extract(page: int, lines: list[str]) -> tuple[dict[str, str], set[str]]:
                 continue
             for j in range(i + 1, min(i + 1 + spec.below_lines, len(clean_lines))):
                 if is_label_line(clean_lines[j]):
-                    continue  # baris berlabel (mis. "No Handphone : 0812...") bukan nilai tanpa label
+                    continue
                 value = spec.normalize(spec.pick(clean_lines[j]) if spec.pick else clean_lines[j])
                 if value:
                     normalized[spec.key] = value
@@ -476,18 +446,12 @@ def _extract(page: int, lines: list[str]) -> tuple[dict[str, str], set[str]]:
 
 
 def extract_fields(page: int, lines: list[str]) -> dict[str, str]:
-    """Kembalikan {namaKolom: nilai}. Kolom yang tidak ketemu bernilai ""."""
     return _extract(page, lines)[0]
 
 
 def extract_with_gaps(page: int, lines: list[str]) -> tuple[dict[str, str], list[str], list[str]]:
-    """
-    (kolom, jumlah-bagian-yang-hilang, catatan). Bagian yang hilang dihitung lebih teliti dari
-    kolom kosong: alamat yang hanya berisi Desa (RT/RW tidak terbaca) tetap dihitung kurang.
-    """
     fields, found = _extract(page, lines)
     gaps = [s.key for s in PAGES[page] if not s.optional and s.key not in found]
-    # Kolom yang diisi dari label lain (mis. tempat/tanggal lahir gabungan) tidak dihitung kurang
     gaps = [k for k in gaps if k.startswith("_") or not fields.get(k)]
     notes = []
     if page == 3 and fields.get("alamat"):

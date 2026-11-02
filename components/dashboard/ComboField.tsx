@@ -37,11 +37,11 @@ export default function ComboField({
       ? [...matched.filter((o) => o.toLowerCase().startsWith(query)), ...matched.filter((o) => !o.toLowerCase().startsWith(query))]
       : matched;
     const list: Row[] = sorted.map((text) => ({ kind: "option", text }));
-    if (query && !matchOption(value, options)) list.push({ kind: "new", text: value.trim() });
+    if (query && !matchOption(value, options)) list.push({ kind: "new", text: (normalize ? normalize(value) : value.trim().toUpperCase()) });
     return list;
-  }, [options, query, value]);
+  }, [options, query, value, normalize]);
 
-  const tidy = (v: string) => matchOption(v, options) ?? (normalize ? normalize(v) : v.replace(/\s+/g, " ").trim());
+  const tidy = (v: string) => matchOption(v, options) ?? (normalize ? normalize(v) : v.replace(/\s+/g, " ").trim().toUpperCase());
 
   // Nilai dari luar (mis. hasil OCR) disamakan dengan pilihan yang ada, selama tidak sedang diketik
   useEffect(() => {
