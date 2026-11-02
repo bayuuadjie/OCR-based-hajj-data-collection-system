@@ -174,20 +174,71 @@ function mergeSpellings(rows: { value: string; total: number }[], prefix: RegExp
     .map((g) => g.best.value);
 }
 
+/** Ekstrak nama desa/kelurahan dari kolom alamat untuk rekomendasi pilihan desa */
+function extractDesa(alamat: string): string | null {
+  if (!alamat || !alamat.trim()) return null;
+  let cleaned = alamat.trim();
+
+  // Hapus pola RT/RW: "RT.001", "RT 01/RW 02", "RT 01/02", "RW.005", dll.
+  cleaned = cleaned
+    .replace(/\bRT[.\s]*\d+\s*[\/,]\s*RW[.\s]*\d+\b/gi, "")
+    .replace(/\bRT[.\s]*\d+\s*\/\s*\d+\b/gi, "")
+    .replace(/\bRT[.\s]*\d+\b/gi, "")
+    .replace(/\bRW[.\s]*\d+\b/gi, "")
+    .replace(/^[,\s/.-]+|[,\s/.-]+$/g, "")
+    .trim();
+
+  // Hapus awalan Desa/Kelurahan/Dusun jika ada
+  cleaned = cleaned
+    .replace(/^(desa|kelurahan|kel|dusun|dsn)\b\.?\s*/i, "")
+    .replace(/^[,\s/.-]+|[,\s/.-]+$/g, "")
+    .trim();
+
+  if (!cleaned || cleaned.length < 2) return null;
+
+  // Abaikan jika terdeteksi nama jalan atau nomor rumah
+  if (/^(jl|jalan|komplek|komp|gang|gg)\b/i.test(cleaned)) return null;
+  if (/\bno\b\.?\s*\d+/i.test(cleaned)) return null;
+
+  // Format huruf kapital di awal setiap kata
+  return cleaned.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+}
+
 router.get("/options", async (_req, res) => {
   try {
-    const entries = await Promise.all(
-      Object.entries(OPTION_COLUMNS).map(async ([key, { column, prefix }]) => {
-        const r = await pool.query(
-          `SELECT trim(${column}) AS value, count(*)::int AS total
-           FROM jemaah
-           WHERE ${column} IS NOT NULL AND trim(${column}) <> ''
-           GROUP BY 1`
-        );
-        return [key, mergeSpellings(r.rows, prefix)] as const;
-      })
-    );
-    res.json(Object.fromEntries(entries));
+    const [entries, alamatResult] = await Promise.all([
+      Promise.all(
+        Object.entries(OPTION_COLUMNS).map(async ([key, { column, prefix }]) => {
+          const r = await pool.query(
+            `SELECT trim(${column}) AS value, count(*)::int AS total
+             FROM jemaah
+             WHERE ${column} IS NOT NULL AND trim(${column}) <> ''
+             GROUP BY 1`
+          );
+          return [key, mergeSpellings(r.rows, prefix)] as const;
+        })
+      ),
+      pool.query(
+        `SELECT trim(alamat) AS alamat, count(*)::int AS total
+         FROM jemaah
+         WHERE alamat IS NOT NULL AND trim(alamat) <> ''
+         GROUP BY 1`
+      ),
+    ]);
+
+    const desaCounts = new Map<string, number>();
+    for (const row of alamatResult.rows) {
+      const d = extractDesa(row.alamat);
+      if (d) {
+        desaCounts.set(d, (desaCounts.get(d) ?? 0) + row.total);
+      }
+    }
+    const desaRows = Array.from(desaCounts.entries()).map(([value, total]) => ({ value, total }));
+    const desaOptions = mergeSpellings(desaRows, null);
+
+    const result: Record<string, string[]> = Object.fromEntries(entries);
+    result.desa = desaOptions;
+    res.json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Gagal mengambil daftar pilihan." });

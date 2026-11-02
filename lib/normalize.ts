@@ -4,13 +4,23 @@ export function canonical(value: string): string {
     .replace(/[.,]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
-    .replace(/^(bank|kecamatan|kec) /, "");
+    .replace(/^(bank|kecamatan|kec|desa|kelurahan|kel|dusun|dsn) /, "");
 }
 
 /** "KEC. CIBIRU" / "Kecamatan Cibiru" / "cibiru" -> "Cibiru" (hapus awalan kec./kecamatan, rapikan kapital). */
 export function normalizeKecamatan(value: string): string {
   const name = value
     .replace(/^\s*(kecamatan|kec)\b\.?\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!name) return "";
+  return name.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+}
+
+/** "Desa Sindangjaya" / "sindangjaya" -> "Sindangjaya" (hapus awalan desa/kelurahan, rapikan kapital). */
+export function normalizeDesa(value: string): string {
+  const name = value
+    .replace(/^\s*(desa|kelurahan|kel|dusun|dsn)\b\.?\s*/i, "")
     .replace(/\s+/g, " ")
     .trim();
   if (!name) return "";

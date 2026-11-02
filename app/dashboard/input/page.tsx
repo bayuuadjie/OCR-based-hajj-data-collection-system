@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DragEvent, useCallback, useEffect, useRef, useState } from "react";
 import ComboField from "@/components/dashboard/ComboField";
-import { normalizeBank, normalizeKecamatan } from "@/lib/normalize";
+import { normalizeBank, normalizeDesa, normalizeKecamatan } from "@/lib/normalize";
 import DateField, { toIso } from "@/components/dashboard/DateField";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -33,7 +33,7 @@ function buildAlamat(rt: string, rw: string, desa: string): string {
 
 type FormState = Record<FieldKey, string>;
 
-type OptionKey = "kecamatan" | "namaBank" | "pendidikan" | "pekerjaan";
+type OptionKey = "kecamatan" | "namaBank" | "pendidikan" | "pekerjaan" | "desa";
 
 type FieldDef = {
   key: FieldKey;
@@ -99,11 +99,12 @@ const SHEETS: Sheet[] = [
 
 const ALL_FIELDS = SHEETS.flatMap((s) => s.fields);
 const DATE_KEYS = new Set<FieldKey>(["tanggalLahir", "tanggalPorsi", "tanggalValidasi"]);
-const COMBO_NORMALIZE: Partial<Record<FieldKey, (value: string) => string>> = {
+const COMBO_NORMALIZE: Partial<Record<FieldKey | "desa", (value: string) => string>> = {
   kecamatan: normalizeKecamatan,
   namaBank: normalizeBank,
+  desa: normalizeDesa,
 };
-const noOptions: Record<OptionKey, string[]> = { kecamatan: [], namaBank: [], pendidikan: [], pekerjaan: [] };
+const noOptions: Record<OptionKey, string[]> = { kecamatan: [], namaBank: [], pendidikan: [], pekerjaan: [], desa: [] };
 
 const emptyForm: FormState = {
   namaLengkap: "", namaAyah: "", jenisKelamin: "", tempatLahir: "", tanggalLahir: "", kecamatan: "",
@@ -246,6 +247,26 @@ export default function InputDataPage() {
         }
         return next;
       });
+
+      if (sheet.page === 3 && found.alamat) {
+        const mRt = found.alamat.match(/\bRT[.\s]*(\d+)/i);
+        const mRw = found.alamat.match(/\bRW[.\s]*(\d+)/i);
+        if (mRt) setRt(mRt[1]);
+        if (mRw) setRw(mRw[1]);
+
+        let d = found.alamat
+          .replace(/\bRT[.\s]*\d+\s*[\/,]\s*RW[.\s]*\d+\b/gi, "")
+          .replace(/\bRT[.\s]*\d+\s*\/\s*\d+\b/gi, "")
+          .replace(/\bRT[.\s]*\d+\b/gi, "")
+          .replace(/\bRW[.\s]*\d+\b/gi, "")
+          .replace(/^(desa|kelurahan|kel|dusun|dsn)\b\.?\s*/i, "")
+          .replace(/^[,\s/.-]+|[,\s/.-]+$/g, "")
+          .trim();
+        if (d && !/^(jl|jalan|komplek|komp)\b/i.test(d)) {
+          d = normalizeDesa(d);
+          setDesa(d);
+        }
+      }
       setOcr((o) => ({
         ...o,
         [page]: { status: "done", missing: data.missing ?? [], text: data.text ?? "", notes: data.notes ?? [] },
@@ -505,9 +526,9 @@ export default function InputDataPage() {
                       </span>
 
                       {/* RT / RW / Desa */}
-                      <div className="grid grid-cols-3 gap-space-sm">
+                      <div className="grid grid-cols-2 sm:grid-cols-12 gap-space-sm">
                         {/* RT */}
-                        <div className="flex flex-col gap-1">
+                        <div className="col-span-1 sm:col-span-3 lg:col-span-2 flex flex-col gap-1">
                           <label htmlFor="f-rt" className="text-label-xs font-label-sm text-on-surface-variant">RT</label>
                           <input
                             id="f-rt"
@@ -526,7 +547,7 @@ export default function InputDataPage() {
                         </div>
 
                         {/* RW */}
-                        <div className="flex flex-col gap-1">
+                        <div className="col-span-1 sm:col-span-3 lg:col-span-2 flex flex-col gap-1">
                           <label htmlFor="f-rw" className="text-label-xs font-label-sm text-on-surface-variant">RW</label>
                           <input
                             id="f-rw"
@@ -544,15 +565,16 @@ export default function InputDataPage() {
                         </div>
 
                         {/* Desa / Kelurahan */}
-                        <div className="flex flex-col gap-1">
+                        <div className="col-span-2 sm:col-span-6 lg:col-span-8 flex flex-col gap-1">
                           <label htmlFor="f-desa" className="text-label-xs font-label-sm text-on-surface-variant">Desa / Kelurahan</label>
-                          <input
+                          <ComboField
                             id="f-desa"
-                            type="text"
-                            placeholder="Nama desa"
-                            className={`${inputClass} ${unread ? "!border-error/60 bg-error-container/20" : ""}`}
                             value={desa}
-                            onChange={(e) => handleDesaChange(e.target.value)}
+                            options={options.desa ?? []}
+                            onChange={handleDesaChange}
+                            normalize={normalizeDesa}
+                            placeholder="Ketik untuk mencari atau pilih desa"
+                            className={`${inputClass} ${unread ? "!border-error/60 bg-error-container/20" : ""}`}
                           />
                         </div>
                       </div>
