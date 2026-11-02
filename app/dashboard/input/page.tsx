@@ -5,15 +5,31 @@ import { useRouter } from "next/navigation";
 import { DragEvent, useCallback, useEffect, useRef, useState } from "react";
 import ComboField from "@/components/dashboard/ComboField";
 import { normalizeBank, normalizeKecamatan } from "@/lib/normalize";
-import DateField, { normalizeDate, toIso } from "@/components/dashboard/DateField";
+import DateField, { toIso } from "@/components/dashboard/DateField";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 type FieldKey =
-  | "namaLengkap" | "namaAyah" | "jenisKelamin" | "tempatLahir" | "tanggalLahir" | "kecamatan"
+  | "namaLengkap" | "jenisKelamin" | "tempatLahir" | "tanggalLahir" | "kecamatan"
   | "noTelepon" | "noPorsi" | "tanggalPorsi" | "namaBank" | "noRekening"
   | "pernahHaji" | "noValidasi" | "tanggalValidasi"
   | "alamat" | "pendidikan" | "pekerjaan";
+
+/** Format angka RT/RW menjadi 3 digit dengan leading zeros dan prefix, misal "2" → "RT.002" */
+function formatRtRw(prefix: "RT" | "RW", raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  return `${prefix}.${digits.padStart(3, "0")}`;
+}
+
+/** Gabungkan rt, rw, desa menjadi string alamat. */
+function buildAlamat(rt: string, rw: string, desa: string): string {
+  const parts: string[] = [];
+  if (rt) parts.push(formatRtRw("RT", rt));
+  if (rw) parts.push(formatRtRw("RW", rw));
+  if (desa.trim()) parts.push(desa.trim());
+  return parts.join(" ");
+}
 
 type FormState = Record<FieldKey, string>;
 
@@ -39,7 +55,6 @@ const SHEETS: Sheet[] = [
     subtitle: "Data diri, nomor porsi, dan rekening",
     fields: [
       { key: "namaLengkap", label: "Nama", required: true, wide: true },
-      { key: "namaAyah", label: "Nama Ayah Kandung", required: true, wide: true },
       {
         key: "jenisKelamin", label: "Jenis Kelamin", kind: "select", required: true,
         options: [{ value: "L", label: "Laki-laki" }, { value: "P", label: "Perempuan" }],
@@ -80,6 +95,7 @@ const SHEETS: Sheet[] = [
   },
 ];
 
+
 const ALL_FIELDS = SHEETS.flatMap((s) => s.fields);
 const DATE_KEYS = new Set<FieldKey>(["tanggalLahir", "tanggalPorsi", "tanggalValidasi"]);
 const COMBO_NORMALIZE: Partial<Record<FieldKey, (value: string) => string>> = {
@@ -89,7 +105,7 @@ const COMBO_NORMALIZE: Partial<Record<FieldKey, (value: string) => string>> = {
 const noOptions: Record<OptionKey, string[]> = { kecamatan: [], namaBank: [], pendidikan: [], pekerjaan: [] };
 
 const emptyForm: FormState = {
-  namaLengkap: "", namaAyah: "", jenisKelamin: "", tempatLahir: "", tanggalLahir: "", kecamatan: "",
+  namaLengkap: "", jenisKelamin: "", tempatLahir: "", tanggalLahir: "", kecamatan: "",
   noTelepon: "", noPorsi: "", tanggalPorsi: "", namaBank: "", noRekening: "",
   pernahHaji: "Belum", noValidasi: "", tanggalValidasi: "",
   alamat: "", pendidikan: "", pekerjaan: "",
@@ -98,20 +114,21 @@ const emptyForm: FormState = {
 type OcrState = { status: "idle" | "loading" | "done" | "error"; message?: string; missing: string[]; text: string; notes?: string[] };
 const idleOcr: OcrState = { status: "idle", missing: [], text: "" };
 
-/** "Bin"/"Binti" mengikuti jenis kelamin; awalan yang sudah ada tidak digandakan. */
-function composeBinBinti(ayah: string, jk: string): string {
-  const name = ayah.replace(/^\s*(binti|bin)\b\.?\s*/i, "").trim();
-  if (!name || !jk) return "";
-  return `${jk === "L" ? "Bin" : "Binti"} ${name}`;
-}
+
 
 const inputClass =
   "w-full h-10 px-3 bg-surface rounded-lg border border-outline-variant text-body-sm text-on-surface placeholder:text-outline focus:border-primary-container focus:ring-1 focus:ring-primary-container focus:outline-none";
 
+/** Konversi yyyy-mm-dd ke dd/mm/yyyy untuk ditampilkan di layar review. */
+function isoToDisplay(iso: string): string {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+}
+
 function displayValue(def: FieldDef, value: string): string {
   if (!value) return "-";
   if (def.kind === "select") return def.options?.find((o) => o.value === value)?.label ?? value;
-  if (def.kind === "date") return normalizeDate(value) ?? value; // yyyy-mm-dd -> dd/mm/yyyy
+  if (def.kind === "date") return isoToDisplay(value);
   return value;
 }
 
@@ -120,6 +137,10 @@ export default function InputDataPage() {
 
   const [step, setStep] = useState(0); // 0..2 = lembar 1..3, 3 = periksa & simpan
   const [form, setForm] = useState<FormState>(emptyForm);
+  // Sub-field alamat yang ditampilkan terpisah ke user
+  const [rt, setRt] = useState("");
+  const [rw, setRw] = useState("");
+  const [desa, setDesa] = useState("");
   const [ocr, setOcr] = useState<Record<number, OcrState>>({ 1: idleOcr, 2: idleOcr, 3: idleOcr });
   const [previews, setPreviews] = useState<Record<number, { url: string; name: string; isPdf: boolean } | null>>({
     1: null, 2: null, 3: null,
@@ -139,7 +160,7 @@ export default function InputDataPage() {
     fetch(`${API_URL}/api/jemaah/options`, { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d && setOptions({ ...noOptions, ...d }))
-      .catch(() => {});
+      .catch(() => { });
     // Bebaskan URL preview saat halaman ditutup
     return () => {
       Object.values(previewsRef.current).forEach((p) => p && URL.revokeObjectURL(p.url));
@@ -152,6 +173,34 @@ export default function InputDataPage() {
       setValidasiAuto(false);
     }
     setForm((f) => ({ ...f, [key]: value }));
+  };
+
+  /** Sync sub-field RT/RW/Desa → form.alamat setiap kali salah satu berubah */
+  const syncAlamat = useCallback(
+    (newRt: string, newRw: string, newDesa: string) => {
+      setForm((f) => ({ ...f, alamat: buildAlamat(newRt, newRw, newDesa) }));
+    },
+    []
+  );
+
+  /** Handler RT: hanya terima angka, sinkron ke alamat */
+  const handleRtChange = (raw: string) => {
+    const digits = raw.replace(/\D/g, "");
+    setRt(digits);
+    syncAlamat(digits, rw, desa);
+  };
+
+  /** Handler RW: hanya terima angka, sinkron ke alamat */
+  const handleRwChange = (raw: string) => {
+    const digits = raw.replace(/\D/g, "");
+    setRw(digits);
+    syncAlamat(rt, digits, desa);
+  };
+
+  /** Handler Desa: sinkron ke alamat */
+  const handleDesaChange = (raw: string) => {
+    setDesa(raw);
+    syncAlamat(rt, rw, raw);
   };
 
   // Tanggal validasi biasanya hanya selisih beberapa hari dari tanggal porsi. Kalau di Lembar 2 belum
@@ -190,7 +239,7 @@ export default function InputDataPage() {
         const next = { ...f };
         for (const [key, value] of Object.entries(found)) {
           if (!value || !pageKeys.has(key as FieldKey)) continue;
-          // OCR mengirim tanggal dd/mm/yyyy; kolom tanggal (input date) menyimpan yyyy-mm-dd
+          // OCR mengirim tanggal dd/mm/yyyy; type="date" menyimpan yyyy-mm-dd
           const converted = DATE_KEYS.has(key as FieldKey) ? toIso(value) : value;
           if (converted) next[key as FieldKey] = converted;
         }
@@ -219,28 +268,20 @@ export default function InputDataPage() {
   }
 
   // ---- Validasi & simpan ----
-  const binBinti = composeBinBinti(form.namaAyah, form.jenisKelamin);
   const missingRequired = ALL_FIELDS.filter((f) => f.required && !form[f.key].trim()).map((f) => f.label);
-  const invalidDates = ALL_FIELDS.filter(
-    (f) => f.kind === "date" && form[f.key].trim() !== "" && normalizeDate(form[f.key]) === null
-  ).map((f) => f.label);
+  // type="date" hanya menghasilkan yyyy-mm-dd atau string kosong; tidak perlu validasi format manual
+  const invalidDates: string[] = [];
 
   async function handleSave() {
     setSaving(true);
     setSaveError(null);
     try {
-      const { namaAyah: _ignored, ...rest } = form;
-      // Server menerima tanggal ISO (yyyy-mm-dd); di layar tetap dd/mm/yyyy
-      const dates = {
-        tanggalLahir: toIso(rest.tanggalLahir) ?? "",
-        tanggalPorsi: toIso(rest.tanggalPorsi) ?? "",
-        tanggalValidasi: toIso(rest.tanggalValidasi) ?? "",
-      };
+      // Input date sudah menghasilkan yyyy-mm-dd; dikirim langsung ke server
       const res = await fetch(`${API_URL}/api/jemaah`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...rest, ...dates, kecamatan: normalizeKecamatan(rest.kecamatan), namaBank: normalizeBank(rest.namaBank), binBinti }),
+        body: JSON.stringify({ ...form, kecamatan: normalizeKecamatan(form.kecamatan), namaBank: normalizeBank(form.namaBank) }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message ?? "Gagal menyimpan.");
@@ -255,6 +296,9 @@ export default function InputDataPage() {
   function resetAll() {
     Object.values(previews).forEach((p) => p && URL.revokeObjectURL(p.url));
     setForm(emptyForm);
+    setRt("");
+    setRw("");
+    setDesa("");
     setOcr({ 1: idleOcr, 2: idleOcr, 3: idleOcr });
     setPreviews({ 1: null, 2: null, 3: null });
     setSavedName(null);
@@ -319,17 +363,15 @@ export default function InputDataPage() {
                 <button
                   type="button"
                   onClick={() => setStep(i)}
-                  className={`w-full text-left rounded-xl border p-space-sm sm:p-space-base transition-colors ${
-                    active
+                  className={`w-full text-left rounded-xl border p-space-sm sm:p-space-base transition-colors ${active
                       ? "border-primary-container bg-primary-fixed/40"
                       : "border-outline-variant bg-surface-container-lowest hover:bg-surface-container-low"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <span
-                      className={`w-6 h-6 rounded-full text-[12px] font-bold flex items-center justify-center shrink-0 ${
-                        active || done ? "bg-primary-container text-on-primary" : "bg-surface-container-highest text-on-surface-variant"
-                      }`}
+                      className={`w-6 h-6 rounded-full text-[12px] font-bold flex items-center justify-center shrink-0 ${active || done ? "bg-primary-container text-on-primary" : "bg-surface-container-highest text-on-surface-variant"
+                        }`}
                     >
                       {done ? <span className="material-symbols-outlined text-[16px]">check</span> : i + 1}
                     </span>
@@ -356,9 +398,8 @@ export default function InputDataPage() {
               }}
               onDragLeave={() => setDragging(false)}
               onDrop={(e) => onDrop(sheet, e)}
-              className={`flex flex-col items-center justify-center gap-2 text-center rounded-xl border-2 border-dashed cursor-pointer p-space-lg transition-colors ${
-                dragging ? "border-primary-container bg-primary-fixed/40" : "border-outline-variant hover:bg-surface-container-low"
-              }`}
+              className={`flex flex-col items-center justify-center gap-2 text-center rounded-xl border-2 border-dashed cursor-pointer p-space-lg transition-colors ${dragging ? "border-primary-container bg-primary-fixed/40" : "border-outline-variant hover:bg-surface-container-low"
+                }`}
             >
               <span className="material-symbols-outlined text-[32px] text-primary">document_scanner</span>
               <span className="text-label-lg font-label-lg text-on-surface">
@@ -447,6 +488,80 @@ export default function InputDataPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-base">
               {sheet.fields.map((def) => {
+                // Alamat ditampilkan sebagai 3 sub-field terpisah (RT, RW, Desa)
+                if (def.key === "alamat") {
+                  const unread = state.status === "done" && state.missing.includes("alamat") && !form.alamat;
+                  return (
+                    <div key="alamat" className="sm:col-span-2 flex flex-col gap-2">
+                      <span className="text-label-sm font-label-sm uppercase tracking-wide text-on-surface-variant">
+                        Alamat {def.required && <span className="text-error">*</span>}
+                        {unread && <span className="ml-2 normal-case text-error">tidak terbaca</span>}
+                      </span>
+
+                      {/* RT / RW / Desa */}
+                      <div className="grid grid-cols-3 gap-space-sm">
+                        {/* RT */}
+                        <div className="flex flex-col gap-1">
+                          <label htmlFor="f-rt" className="text-label-xs font-label-sm text-on-surface-variant">RT</label>
+                          <input
+                            id="f-rt"
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="001"
+                            maxLength={5}
+                            className={`${inputClass} ${unread ? "!border-error/60 bg-error-container/20" : ""}`}
+                            value={rt}
+                            onChange={(e) => handleRtChange(e.target.value)}
+                            onBlur={() => {
+                              // Re-sync agar format tampil sudah dengan 3 digit jika user sudah blur
+                              if (rt) setRt(rt.padStart(3, "0"));
+                            }}
+                          />
+                        </div>
+
+                        {/* RW */}
+                        <div className="flex flex-col gap-1">
+                          <label htmlFor="f-rw" className="text-label-xs font-label-sm text-on-surface-variant">RW</label>
+                          <input
+                            id="f-rw"
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="001"
+                            maxLength={5}
+                            className={`${inputClass} ${unread ? "!border-error/60 bg-error-container/20" : ""}`}
+                            value={rw}
+                            onChange={(e) => handleRwChange(e.target.value)}
+                            onBlur={() => {
+                              if (rw) setRw(rw.padStart(3, "0"));
+                            }}
+                          />
+                        </div>
+
+                        {/* Desa / Kelurahan */}
+                        <div className="flex flex-col gap-1">
+                          <label htmlFor="f-desa" className="text-label-xs font-label-sm text-on-surface-variant">Desa / Kelurahan</label>
+                          <input
+                            id="f-desa"
+                            type="text"
+                            placeholder="Nama desa"
+                            className={`${inputClass} ${unread ? "!border-error/60 bg-error-container/20" : ""}`}
+                            value={desa}
+                            onChange={(e) => handleDesaChange(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Preview gabungan */}
+                      {form.alamat && (
+                        <p className="text-label-md font-label-md text-on-surface-variant px-1">
+                          Tersimpan sebagai:{" "}
+                          <span className="font-semibold text-on-surface">{form.alamat}</span>
+                        </p>
+                      )}
+                    </div>
+                  );
+                }
+
                 const value = form[def.key];
                 const unread = state.status === "done" && state.missing.includes(def.key) && !value;
                 const cls = `${inputClass} ${unread ? "!border-error/60 bg-error-container/20" : ""}`;
@@ -514,12 +629,7 @@ export default function InputDataPage() {
                     </div>
                   );
                 })}
-                {s.page === 1 && (
-                  <div>
-                    <dt className="text-label-sm font-label-sm uppercase tracking-wide text-outline">Bin/Binti (akan disimpan)</dt>
-                    <dd className="text-body-md text-on-surface">{binBinti || "-"}</dd>
-                  </div>
-                )}
+
               </dl>
               <button type="button" onClick={() => setStep(s.page - 1)} className="mt-2 text-label-md font-label-md text-primary font-semibold hover:underline">
                 Ubah {s.title}
