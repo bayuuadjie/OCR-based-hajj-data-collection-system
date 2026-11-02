@@ -14,7 +14,7 @@ export default function LoginPage() {
           DESKTOP LEFT SIDE: Visual Hero Image & Sunset Overlay
           ===================================================================== */}
       <div className="hidden lg:relative lg:flex lg:w-1/2 xl:w-7/12 min-h-screen overflow-hidden bg-black select-none">
-        {/* Foto Ka'bah dari Assets */}
+        {/* Foto Assets */}
         <img
           src="/assets/login-img.jpg"
           alt="Masjidil Haram Makkah"
@@ -64,7 +64,7 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {/* Fitur Utama Cards (Liquid Glass Effect) */}
+            {/* Fitur Utama Cards */}
             <div className="grid grid-cols-3 gap-3 pt-2">
               <div className="p-3 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 shadow-sm flex flex-col gap-1.5">
                 <span className="material-symbols-outlined text-[#FFA05A] text-2xl">
@@ -78,7 +78,7 @@ export default function LoginPage() {
                   verified_user
                 </span>
                 <span className="text-xs font-semibold text-white">Tervalidasi</span>
-                <span className="text-[11px] text-white/70 leading-snug">Sesuai standar Kemenag</span>
+                <span className="text-[11px] text-white/70 leading-snug">Sesuai standar</span>
               </div>
               <div className="p-3 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 shadow-sm flex flex-col gap-1.5">
                 <span className="material-symbols-outlined text-[#FFA05A] text-2xl">
@@ -93,7 +93,7 @@ export default function LoginPage() {
           {/* Footer Caption */}
           <div className="flex items-center justify-between text-xs text-white/60 pt-4 border-t border-white/10">
             <span>Masjidil Haram, Makkah Al-Mukarramah</span>
-            <span>Versi 2.0 • Arsitektur Modern</span>
+            <span>Versi 1.0</span>
           </div>
         </div>
       </div>
@@ -137,7 +137,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Top Navbar Desktop (Hanya di lg ke atas) */}
+        {/* Top Navbar Desktop*/}
         <header className="hidden lg:flex items-center justify-between px-8 py-5 border-b border-outline-variant/50">
           <div className="flex items-center gap-2 text-on-surface-variant text-label-sm font-medium">
             <span className="material-symbols-outlined text-[17px] text-primary">
@@ -199,10 +199,6 @@ export default function LoginPage() {
         <footer className="w-full py-4 px-6 border-t border-outline-variant/60 bg-surface text-center">
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-on-surface-variant">
             <span>© {new Date().getFullYear()} Kementerian Haji &amp; Umrah Kab. Magetan</span>
-            <span className="text-outline-variant">•</span>
-            <a href="#help" className="hover:text-primary transition-colors">
-              Bantuan Teknis
-            </a>
             <span className="text-outline-variant">•</span>
             <a href="#privacy" className="hover:text-primary transition-colors">
               Kebijakan Privasi

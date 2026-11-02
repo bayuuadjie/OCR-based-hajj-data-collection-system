@@ -343,7 +343,7 @@ function DashboardContent() {
               Kecamatan
             </p>
             <h3 className="text-xl sm:text-2xl font-extrabold text-on-surface font-headline-md leading-tight truncate mt-0.5">
-              {kecamatanOptions.length || 18} Wilayah
+              {kecamatanOptions.length} Wilayah
             </h3>
           </div>
         </div>

@@ -63,7 +63,7 @@ export default function LoginForm() {
           className="block font-label-md text-label-md text-on-surface font-semibold"
           htmlFor="identifier"
         >
-          Email / Username / NIP
+          Email / Username
         </label>
         <div className="relative flex items-center group">
           <span className="material-symbols-outlined absolute left-3.5 text-outline group-focus-within:text-primary transition-colors duration-150 pointer-events-none text-[20px]">
@@ -75,7 +75,7 @@ export default function LoginForm() {
             type="text"
             required
             autoComplete="username"
-            placeholder="nama@kemenag.go.id atau NIP"
+            placeholder="nama@example.com atau NIP"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
             className="w-full h-11 pl-11 pr-3.5 bg-surface text-on-surface placeholder:text-outline border border-outline-variant rounded-xl hover:border-outline focus:border-primary focus:ring-4 focus:ring-primary/15 font-body-md text-body-md transition-all duration-200 outline-none"

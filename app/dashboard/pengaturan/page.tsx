@@ -246,7 +246,6 @@ export default function PengaturanPage() {
 
               <p className="text-label-md font-label-md text-outline">
                 Akun dibuat {new Date(profile.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}.
-                Username dan role hanya bisa diubah admin.
               </p>
 
               <Banner msg={profileMsg} />
@@ -260,7 +259,7 @@ export default function PengaturanPage() {
         </Card>
 
         {/* Password */}
-        <Card title="Ganti Password" description="Gunakan password yang panjang dan tidak dipakai di tempat lain.">
+        <Card title="Ganti Password" description="Gunakan password yang panjang dan gunakan kombinasi huruf, angka, dan simbol.">
           <form onSubmit={savePassword} className="space-y-space-base" noValidate>
             <div className="flex flex-col gap-1">
               <label htmlFor="s-current" className={labelClass}>Password Saat Ini</label>
@@ -351,7 +350,7 @@ export default function PengaturanPage() {
                     </p>
                   ) : (
                     <p className="text-label-md font-label-md text-outline">
-                      {status.ocr.message} Jalankan layanan di folder ocr_service (lihat README di dalamnya).
+                      {status.ocr.message}
                     </p>
                   )}
                 </dl>

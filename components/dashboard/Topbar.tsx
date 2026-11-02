@@ -39,7 +39,7 @@ export default function Topbar({
               Sistem Pendataan Haji &amp; Umrah
             </h1>
             <span className="hidden sm:block text-[11px] text-on-surface-variant font-medium truncate">
-              Kementerian Haji &amp; Umrah Kabupaten Magetan
+              Kantor Kementerian Haji &amp; Umrah Kabupaten Magetan
             </span>
           </div>
         </div>
