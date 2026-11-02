@@ -235,10 +235,11 @@ function isoDate(v: unknown): string | null | undefined {
 
 router.post("/", async (req, res) => {
   const b = req.body ?? {};
+  const binBinti = str(b.binBinti) ?? str(b.namaAyah);
 
   const required: [string, string | null][] = [
     ["Nama", str(b.namaLengkap)],
-    ["Nama ayah (Bin/Binti)", str(b.binBinti)],
+    ["Nama ayah (Bin/Binti)", binBinti],
     ["Alamat", str(b.alamat)],
     ["Nomor porsi", str(b.noPorsi)],
   ];
@@ -276,7 +277,7 @@ router.post("/", async (req, res) => {
        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
        RETURNING id`,
       [
-        randomUUID(), str(b.namaLengkap), str(b.binBinti), str(b.alamat), str(b.kecamatan),
+        randomUUID(), str(b.namaLengkap), binBinti, str(b.alamat), str(b.kecamatan),
         str(b.noTelepon), str(b.tempatLahir), tanggalLahir, pernahHaji, str(b.pekerjaan),
         str(b.pendidikan), jenisKelamin, str(b.namaBank), str(b.noRekening),
         str(b.noValidasi), str(b.noPorsi), tanggalValidasi, tanggalPorsi, req.user?.sub ?? null,

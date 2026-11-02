@@ -10,7 +10,7 @@ import DateField, { toIso } from "@/components/dashboard/DateField";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 type FieldKey =
-  | "namaLengkap" | "jenisKelamin" | "tempatLahir" | "tanggalLahir" | "kecamatan"
+  | "namaLengkap" | "namaAyah" | "jenisKelamin" | "tempatLahir" | "tanggalLahir" | "kecamatan"
   | "noTelepon" | "noPorsi" | "tanggalPorsi" | "namaBank" | "noRekening"
   | "pernahHaji" | "noValidasi" | "tanggalValidasi"
   | "alamat" | "pendidikan" | "pekerjaan";
@@ -55,6 +55,7 @@ const SHEETS: Sheet[] = [
     subtitle: "Data diri, nomor porsi, dan rekening",
     fields: [
       { key: "namaLengkap", label: "Nama", required: true, wide: true },
+      { key: "namaAyah", label: "Nama Ayah Kandung", required: true, wide: true },
       {
         key: "jenisKelamin", label: "Jenis Kelamin", kind: "select", required: true,
         options: [{ value: "L", label: "Laki-laki" }, { value: "P", label: "Perempuan" }],
@@ -105,7 +106,7 @@ const COMBO_NORMALIZE: Partial<Record<FieldKey, (value: string) => string>> = {
 const noOptions: Record<OptionKey, string[]> = { kecamatan: [], namaBank: [], pendidikan: [], pekerjaan: [] };
 
 const emptyForm: FormState = {
-  namaLengkap: "", jenisKelamin: "", tempatLahir: "", tanggalLahir: "", kecamatan: "",
+  namaLengkap: "", namaAyah: "", jenisKelamin: "", tempatLahir: "", tanggalLahir: "", kecamatan: "",
   noTelepon: "", noPorsi: "", tanggalPorsi: "", namaBank: "", noRekening: "",
   pernahHaji: "Belum", noValidasi: "", tanggalValidasi: "",
   alamat: "", pendidikan: "", pekerjaan: "",
@@ -281,7 +282,12 @@ export default function InputDataPage() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, kecamatan: normalizeKecamatan(form.kecamatan), namaBank: normalizeBank(form.namaBank) }),
+        body: JSON.stringify({
+          ...form,
+          binBinti: form.namaAyah,
+          kecamatan: normalizeKecamatan(form.kecamatan),
+          namaBank: normalizeBank(form.namaBank),
+        }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message ?? "Gagal menyimpan.");
