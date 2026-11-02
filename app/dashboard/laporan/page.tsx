@@ -243,12 +243,11 @@ export default function LaporanPage() {
           ) : (
             <>
               {/* Ringkasan */}
-              <section className={`grid grid-cols-2 lg:grid-cols-5 gap-space-base ${loading ? "opacity-60" : ""}`}>
+              <section className={`grid grid-cols-2 lg:grid-cols-4 gap-space-base ${loading ? "opacity-60" : ""}`}>
                 <StatCard label="Total Jemaah" value={fmt(r.total)} icon="groups" hint={r.tanpaValidasi > 0 ? `${fmt(r.tanpaValidasi)} belum divalidasi` : undefined} />
-                <StatCard label="Laki-laki" value={fmt(r.laki)} icon="man" hint={percent(r.laki, r.total)} />
-                <StatCard label="Perempuan" value={fmt(r.perempuan)} icon="woman" hint={percent(r.perempuan, r.total)} />
                 <StatCard label="Sudah Haji" value={fmt(r.sudahHaji)} icon="verified" hint={percent(r.sudahHaji, r.total)} />
                 <StatCard label="Belum Haji" value={fmt(r.belumHaji)} icon="hourglass_top" hint={percent(r.belumHaji, r.total)} />
+                <StatCard label="Kecamatan Terdaftar" value={fmt(data.perKecamatan.length)} icon="location_on" />
               </section>
 
               {/* Grafik per kecamatan */}
