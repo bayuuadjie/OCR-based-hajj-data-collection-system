@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS operators (
   email         TEXT UNIQUE,
   name          TEXT NOT NULL,
   password_hash TEXT NOT NULL,
+  active_session_id TEXT,
+  active_session_expires_at TIMESTAMPTZ,
   role          operator_role NOT NULL DEFAULT 'OPERATOR',
   is_active     BOOLEAN NOT NULL DEFAULT true,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),

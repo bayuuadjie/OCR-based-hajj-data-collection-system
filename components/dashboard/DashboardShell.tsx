@@ -6,6 +6,8 @@ import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 
 const STORAGE_KEY = "sidebar-collapsed";
+const HEARTBEAT_INTERVAL_MS = 30 * 1000;
+const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000;
 
 export default function DashboardShell({
   user,
@@ -29,6 +31,59 @@ export default function DashboardShell({
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    let lastActivityAt = Date.now();
+    let lastHeartbeatAt = 0;
+    let heartbeatInProgress = false;
+
+    const heartbeat = async () => {
+      if (heartbeatInProgress || document.visibilityState !== "visible") return;
+      heartbeatInProgress = true;
+      try {
+        const response = await fetch("/api/auth/heartbeat", {
+          method: "POST",
+          credentials: "include",
+        });
+        if (response.status === 401) {
+          window.location.assign("/login");
+          return;
+        }
+        if (!response.ok) {
+          throw new Error(`Heartbeat gagal: ${response.status}`);
+        }
+        lastHeartbeatAt = Date.now();
+      } catch (error) {
+        console.error("Gagal memperbarui sesi login:", error);
+      } finally {
+        heartbeatInProgress = false;
+      }
+    };
+
+    const markActivity = () => {
+      lastActivityAt = Date.now();
+      if (lastActivityAt - lastHeartbeatAt >= HEARTBEAT_INTERVAL_MS) {
+        void heartbeat();
+      }
+    };
+
+    const interval = window.setInterval(() => {
+      if (Date.now() - lastActivityAt < INACTIVITY_TIMEOUT_MS) {
+        void heartbeat();
+      }
+    }, HEARTBEAT_INTERVAL_MS);
+
+    const activityEvents = ["pointerdown", "pointermove", "keydown", "touchstart", "scroll"] as const;
+    activityEvents.forEach((event) => window.addEventListener(event, markActivity, { passive: true }));
+    document.addEventListener("visibilitychange", markActivity);
+    void heartbeat();
+
+    return () => {
+      window.clearInterval(interval);
+      activityEvents.forEach((event) => window.removeEventListener(event, markActivity));
+      document.removeEventListener("visibilitychange", markActivity);
+    };
+  }, []);
 
   // Tutup menu geser dengan tombol Escape
   useEffect(() => {

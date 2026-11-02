@@ -28,3 +28,6 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Login session
+
+Each account can have only one active login session. A new login is rejected while the account is in use on another device; the existing session is not replaced. Dashboard activity refreshes the session, and it expires automatically after 10 minutes without activity. Logging out, changing a password, or an administrator resetting access also invalidates the affected session. The API adds session-tracking columns to an existing `operators` table at startup.

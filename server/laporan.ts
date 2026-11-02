@@ -12,7 +12,11 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
 
   try {
     const payload = await verifySessionToken(token);
-    const result = await pool.query("SELECT is_active FROM operators WHERE id = $1", [payload.sub]);
+    const result = await pool.query(
+      `SELECT is_active FROM operators
+       WHERE id = $1 AND active_session_id = $2 AND active_session_expires_at > now()`,
+      [payload.sub, payload.sid]
+    );
     if (!result.rows[0]?.is_active) {
       return res.status(401).json({ message: "Akun tidak aktif." });
     }

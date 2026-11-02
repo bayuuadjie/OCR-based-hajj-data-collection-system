@@ -1,7 +1,13 @@
 import { Router, Request, Response, NextFunction } from "express";
+import { randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
 import { pool } from "./db";
-import { createSessionToken, verifySessionToken, SESSION_COOKIE_NAME } from "../lib/session";
+import {
+  createSessionToken,
+  verifySessionToken,
+  SESSION_COOKIE_NAME,
+  SESSION_IDLE_TIMEOUT_MINUTES,
+} from "../lib/session";
 
 type Account = {
   id: string;
@@ -10,6 +16,7 @@ type Account = {
   email: string | null;
   role: "ADMIN" | "OPERATOR";
   created_at: string;
+  sessionId: string;
 };
 
 declare module "express-serve-static-core" {
@@ -27,14 +34,16 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
   try {
     const payload = await verifySessionToken(token);
     const result = await pool.query(
-      `SELECT id, username, name, email, role, is_active, created_at FROM operators WHERE id = $1`,
-      [payload.sub]
+      `SELECT id, username, name, email, role, is_active, created_at
+       FROM operators
+       WHERE id = $1 AND active_session_id = $2 AND active_session_expires_at > now()`,
+      [payload.sub, payload.sid]
     );
     const row = result.rows[0];
     if (!row || !row.is_active) {
       return res.status(401).json({ message: "Akun tidak aktif." });
     }
-    req.account = row;
+    req.account = { ...row, sessionId: payload.sid };
     next();
   } catch {
     return res.status(401).json({ message: "Sesi tidak valid atau kedaluwarsa." });
@@ -51,14 +60,24 @@ const toProfile = (a: Account) => ({
   createdAt: a.created_at,
 });
 
-async function reissueSession(res: Response, a: Pick<Account, "id" | "username" | "name" | "role">) {
-  const token = await createSessionToken({ sub: a.id, username: a.username, name: a.name, role: a.role });
+async function reissueSession(
+  res: Response,
+  a: Pick<Account, "id" | "username" | "name" | "role">,
+  sessionId: string
+) {
+  const token = await createSessionToken({
+    sub: a.id,
+    sid: sessionId,
+    username: a.username,
+    name: a.name,
+    role: a.role,
+  });
   res.cookie(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 8 * 60 * 60 * 1000, // 8 jam
+    maxAge: SESSION_IDLE_TIMEOUT_MINUTES * 60 * 1000,
   });
 }
 
@@ -88,7 +107,7 @@ router.patch("/profile", async (req, res) => {
       req.account!.id,
     ]);
     const updated: Account = { ...req.account!, name, email: email || null };
-    await reissueSession(res, updated);
+    await reissueSession(res, updated, req.account!.sessionId);
     res.json({ message: "Profil diperbarui.", profile: toProfile(updated) });
   } catch (err: any) {
     if (err?.code === "23505") {
@@ -154,7 +173,27 @@ router.post("/password", async (req, res) => {
     }
 
     const hash = await bcrypt.hash(next, 12);
-    await pool.query(`UPDATE operators SET password_hash = $1, updated_at = now() WHERE id = $2`, [hash, id]);
+    const sessionId = randomUUID();
+    const updated = await pool.query(
+      `UPDATE operators
+       SET password_hash = $1, active_session_id = $2,
+           active_session_expires_at = now() + ($6 * interval '1 minute'), updated_at = now()
+       WHERE id = $3 AND password_hash = $4 AND active_session_id = $5`,
+      [
+        hash,
+        sessionId,
+        id,
+        result.rows[0].password_hash,
+        req.account!.sessionId,
+        SESSION_IDLE_TIMEOUT_MINUTES,
+      ]
+    );
+    if (updated.rowCount !== 1) {
+      return res.status(401).json({
+        message: "Sesi berakhir atau password akun telah berubah. Silakan login kembali.",
+      });
+    }
+    await reissueSession(res, req.account!, sessionId);
     failures.delete(id);
     res.json({ message: "Password berhasil diganti." });
   } catch (err) {

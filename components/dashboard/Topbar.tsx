@@ -46,22 +46,22 @@ export default function Topbar({
       </div>
 
       {/* Kanan: Theme Toggle, Notifikasi, User Avatar */}
-      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+      <div className="flex items-center gap-4 sm:gap-3 shrink-0">
         {/* Toggle Dark/Light Mode */}
         <ThemeToggle />
 
         <div className="h-6 w-px bg-outline-variant mx-0.5 sm:mx-1" />
 
         {/* Profil Pengguna */}
-        <div className="flex items-center gap-1 pl-1">
+        <div className="flex items-center gap-4 pl-1">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-[#E05300] text-white flex items-center justify-center text-label-md font-bold shadow-sm shrink-0">
             {initialsOf(user.name)}
           </div>
-          <div className="hidden mr-5 md:flex flex-col text-right min-w-0">
+          <div className="hidden mr-5 md:flex flex-col text-left min-w-0">
             <span className="text-label-md font-semibold text-on-surface leading-tight truncate max-w-[160px]">
               {user.name}
             </span>
-            <span className="mt-0.5 inline-block w-fit px-1.5 py-0.2 rounded-md bg-primary/10 text-primary font-bold text-[10px] tracking-wider uppercase">
+            <span className="mt-0.5 inline-block w-fit py-0.2 rounded-md bg-primary/10 text-primary font-bold text-[10px] tracking-wider uppercase">
               {user.role === "ADMIN" ? "Admin" : "Operator"}
             </span>
           </div>

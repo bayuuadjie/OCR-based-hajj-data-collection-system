@@ -16,12 +16,18 @@ async function main() {
     console.error("Password minimal 8 karakter.");
     process.exit(1);
   }
+  if (Buffer.byteLength(password, "utf8") > 72) {
+    console.error("Password terlalu panjang (maksimal 72 byte).");
+    process.exit(1);
+  }
 
   const role = roleArg === "ADMIN" ? "ADMIN" : "OPERATOR";
   const passwordHash = await bcrypt.hash(password, 12);
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
   try {
+    await pool.query("ALTER TABLE operators ADD COLUMN IF NOT EXISTS active_session_id TEXT");
+    await pool.query("ALTER TABLE operators ADD COLUMN IF NOT EXISTS active_session_expires_at TIMESTAMPTZ");
     await pool.query(
       `INSERT INTO operators (id, username, email, name, password_hash, role)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -31,6 +37,8 @@ async function main() {
          name = EXCLUDED.name,
          password_hash = EXCLUDED.password_hash,
          role = EXCLUDED.role,
+         active_session_id = NULL,
+         active_session_expires_at = NULL,
          updated_at = now()`,
       [randomUUID(), username, email || null, name, passwordHash, role]
     );

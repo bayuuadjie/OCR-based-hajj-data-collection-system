@@ -20,8 +20,9 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   try {
     const payload = await verifySessionToken(token);
     const result = await pool.query(
-      "SELECT role, is_active FROM operators WHERE id = $1",
-      [payload.sub]
+      `SELECT role, is_active FROM operators
+       WHERE id = $1 AND active_session_id = $2 AND active_session_expires_at > now()`,
+      [payload.sub, payload.sid]
     );
     const row = result.rows[0];
 
@@ -70,6 +71,9 @@ router.post("/", async (req, res) => {
   }
   if (String(password).length < 8) {
     return res.status(400).json({ message: "Password minimal 8 karakter." });
+  }
+  if (Buffer.byteLength(String(password), "utf8") > 72) {
+    return res.status(400).json({ message: "Password terlalu panjang (maksimal 72 byte)." });
   }
 
   try {
@@ -122,7 +126,14 @@ router.patch("/:id", async (req, res) => {
     if (String(password).length < 8) {
       return res.status(400).json({ message: "Password minimal 8 karakter." });
     }
+    if (Buffer.byteLength(String(password), "utf8") > 72) {
+      return res.status(400).json({ message: "Password terlalu panjang (maksimal 72 byte)." });
+    }
     add("password_hash", await bcrypt.hash(String(password), 12));
+  }
+  if (role !== undefined || isActive !== undefined || password) {
+    add("active_session_id", null);
+    add("active_session_expires_at", null);
   }
 
   if (sets.length === 0) {
