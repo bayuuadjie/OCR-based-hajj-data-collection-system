@@ -369,6 +369,83 @@ router.post("/", async (req, res) => {
   }
 });
 
+router.patch("/:id", async (req, res) => {
+  const b = req.body ?? {};
+  const binBinti = strUpper(b.binBinti);
+  const required: [string, string | null][] = [
+    ["Nama", strUpper(b.namaLengkap)],
+    ["Nama ayah (Bin/Binti)", binBinti],
+    ["Alamat", strUpper(b.alamat)],
+    ["Nomor porsi", str(b.noPorsi)],
+  ];
+  const missing = required.filter(([, value]) => !value).map(([label]) => label);
+  if (missing.length) {
+    return res.status(400).json({ message: `Wajib diisi: ${missing.join(", ")}.` });
+  }
+
+  const jenisKelamin = str(b.jenisKelamin);
+  if (jenisKelamin && jenisKelamin !== "L" && jenisKelamin !== "P") {
+    return res.status(400).json({ message: "Jenis kelamin harus L atau P." });
+  }
+  const pernahHaji = str(b.pernahHaji) ?? "Belum";
+  if (pernahHaji !== "Sudah" && pernahHaji !== "Belum") {
+    return res.status(400).json({ message: "Status haji harus Sudah atau Belum." });
+  }
+
+  const dates: [string, string | null | undefined][] = [
+    ["Tanggal lahir", isoDate(b.tanggalLahir)],
+    ["Tanggal porsi", isoDate(b.tanggalPorsi)],
+    ["Tanggal validasi", isoDate(b.tanggalValidasi)],
+  ];
+  const badDate = dates.find(([, value]) => value === undefined);
+  if (badDate) {
+    return res.status(400).json({ message: `${badDate[0]} tidak valid.` });
+  }
+  const [tanggalLahir, tanggalPorsi, tanggalValidasi] = dates.map(([, value]) => value as string | null);
+
+  try {
+    const result = await pool.query(
+      `UPDATE jemaah SET
+         nama_lengkap = $2, bin_binti = $3, alamat = $4, kecamatan = $5, no_telepon = $6,
+         tempat_lahir = $7, tanggal_lahir = $8, pernah_haji = $9, pekerjaan = $10,
+         pendidikan = $11, jenis_kelamin = $12, nama_bank = $13, no_rekening = $14,
+         no_validasi = $15, no_porsi = $16, tanggal_validasi = $17, tanggal_porsi = $18
+       WHERE id = $1
+       RETURNING id`,
+      [
+        req.params.id,
+        strUpper(b.namaLengkap),
+        binBinti,
+        strUpper(b.alamat),
+        strUpper(b.kecamatan),
+        str(b.noTelepon),
+        strUpper(b.tempatLahir),
+        tanggalLahir,
+        pernahHaji,
+        strUpper(b.pekerjaan),
+        strUpper(b.pendidikan),
+        jenisKelamin,
+        strUpper(b.namaBank),
+        str(b.noRekening),
+        str(b.noValidasi),
+        str(b.noPorsi),
+        tanggalValidasi,
+        tanggalPorsi,
+      ]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "Data tidak ditemukan." });
+    }
+    res.json({ message: "Data jemaah diperbarui." });
+  } catch (err: any) {
+    if (err?.code === "23505") {
+      return res.status(409).json({ message: "Nomor porsi ini sudah terdaftar." });
+    }
+    console.error(err);
+    res.status(500).json({ message: "Gagal memperbarui data jemaah." });
+  }
+});
+
 // Hapus data jemaah (khusus admin)
 router.delete("/:id", async (req, res) => {
   if (req.user?.role !== "ADMIN") {

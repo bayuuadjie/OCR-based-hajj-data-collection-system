@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useCallback, useEffect, useState } from "react";
+import Swal from "sweetalert2";
 
 type Jemaah = {
   id: string;
@@ -24,6 +25,61 @@ type Jemaah = {
   tanggalValidasi: string | null;
   tanggalPorsi: string | null;
 };
+
+type EditForm = Record<Exclude<keyof Jemaah, "id">, string>;
+
+const editFields: {
+  key: keyof EditForm;
+  label: string;
+  kind?: "date" | "select" | "textarea";
+  required?: boolean;
+}[] = [
+  { key: "namaLengkap", label: "Nama lengkap", required: true },
+  { key: "binBinti", label: "Bin/Binti", required: true },
+  { key: "jenisKelamin", label: "Jenis kelamin", kind: "select" },
+  { key: "tempatLahir", label: "Tempat lahir" },
+  { key: "tanggalLahir", label: "Tanggal lahir", kind: "date" },
+  { key: "kecamatan", label: "Kecamatan" },
+  { key: "noTelepon", label: "Nomor telepon" },
+  { key: "noPorsi", label: "Nomor porsi", required: true },
+  { key: "tanggalPorsi", label: "Tanggal porsi", kind: "date" },
+  { key: "namaBank", label: "Nama bank" },
+  { key: "noRekening", label: "Nomor rekening" },
+  { key: "pernahHaji", label: "Pernah haji", kind: "select" },
+  { key: "noValidasi", label: "Nomor validasi" },
+  { key: "tanggalValidasi", label: "Tanggal validasi", kind: "date" },
+  { key: "alamat", label: "Alamat", kind: "textarea", required: true },
+  { key: "pendidikan", label: "Pendidikan" },
+  { key: "pekerjaan", label: "Pekerjaan" },
+];
+
+function dateToIso(value: string | null): string {
+  if (!value) return "";
+  const match = value.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : value;
+}
+
+function toEditForm(jemaah: Jemaah): EditForm {
+  return {
+    namaLengkap: jemaah.namaLengkap ?? "",
+    binBinti: jemaah.binBinti ?? "",
+    alamat: jemaah.alamat ?? "",
+    kecamatan: jemaah.kecamatan ?? "",
+    noTelepon: jemaah.noTelepon ?? "",
+    tempatLahir: jemaah.tempatLahir ?? "",
+    tanggalLahir: dateToIso(jemaah.tanggalLahir),
+    pernahHaji: jemaah.pernahHaji ?? "Belum",
+    pekerjaan: jemaah.pekerjaan ?? "",
+    pendidikan: jemaah.pendidikan ?? "",
+    jenisKelamin: jemaah.jenisKelamin ?? "",
+    namaBank: jemaah.namaBank ?? "",
+    noRekening: jemaah.noRekening ?? "",
+    noValidasi: jemaah.noValidasi ?? "",
+    noPorsi: jemaah.noPorsi ?? "",
+    tanggalValidasi: dateToIso(jemaah.tanggalValidasi),
+    tanggalPorsi: dateToIso(jemaah.tanggalPorsi),
+  };
+}
 
 type Filters = { q: string; pernahHaji: string; kecamatan: string; from: string; to: string };
 
@@ -133,12 +189,9 @@ function DashboardContent() {
   const [kecamatanOptions, setKecamatanOptions] = useState<string[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [exporting, setExporting] = useState(false);
-
-  // Stats calculation
-  const [stats, setStats] = useState({
-    sudahHaji: 0,
-    belumHaji: 0,
-  });
+  const [editing, setEditing] = useState<Jemaah | null>(null);
+  const [editForm, setEditForm] = useState<EditForm | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     setDraft((d) => (d.q === urlQ ? d : { ...d, q: urlQ }));
@@ -175,9 +228,6 @@ function DashboardContent() {
     api<{ user: { role: string } }>("/api/auth/me")
       .then((r) => setIsAdmin(r.user.role === "ADMIN"))
       .catch(() => {});
-    api<{ ringkasan: { sudahHaji: number; belumHaji: number } }>("/api/laporan")
-      .then((r) => setStats({ sudahHaji: r.ringkasan.sudahHaji, belumHaji: r.ringkasan.belumHaji }))
-      .catch(() => {});
   }, []);
 
   function applyFilters(e?: FormEvent) {
@@ -211,20 +261,68 @@ function DashboardContent() {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : "Gagal mengekspor data.");
+      await Swal.fire({
+        icon: "error",
+        title: "Gagal mengekspor data",
+        text: err instanceof Error ? err.message : "Gagal mengekspor data.",
+      });
     } finally {
       setExporting(false);
     }
   }
 
+  function openEdit(jemaah: Jemaah) {
+    setEditing(jemaah);
+    setEditForm(toEditForm(jemaah));
+  }
+
+  async function handleEditSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!editing || !editForm) return;
+    setSavingEdit(true);
+    try {
+      await api(`/api/jemaah/${editing.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      setEditing(null);
+      setEditForm(null);
+      await load();
+      await Swal.fire({ icon: "success", title: "Data berhasil diperbarui", timer: 1600, showConfirmButton: false });
+    } catch (err) {
+      await Swal.fire({
+        icon: "error",
+        title: "Gagal memperbarui data",
+        text: err instanceof Error ? err.message : "Gagal memperbarui data jemaah.",
+      });
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
   async function handleDelete(j: Jemaah) {
-    if (!window.confirm(`Hapus data "${j.namaLengkap}"? Tindakan ini tidak bisa dibatalkan.`)) return;
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "Hapus data jemaah?",
+      text: `Data "${j.namaLengkap}" akan dihapus permanen.`,
+      showCancelButton: true,
+      confirmButtonText: "Ya, hapus",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#dc2626",
+    });
+    if (!result.isConfirmed) return;
     try {
       await api(`/api/jemaah/${j.id}`, { method: "DELETE" });
       if (rows.length === 1 && page > 1) setPage(page - 1);
       else await load();
+      await Swal.fire({ icon: "success", title: "Data berhasil dihapus", timer: 1600, showConfirmButton: false });
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : "Gagal menghapus data.");
+      await Swal.fire({
+        icon: "error",
+        title: "Gagal menghapus data",
+        text: err instanceof Error ? err.message : "Gagal menghapus data.",
+      });
     }
   }
 
@@ -560,9 +658,16 @@ function DashboardContent() {
                   </dl>
                 </details>
 
-                {/* Tombol Aksi Admin */}
-                {isAdmin && (
-                  <div className="pt-2 flex justify-end">
+                <div className="pt-2 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(j)}
+                    className="h-8 px-3 rounded-lg border border-primary/30 text-primary hover:bg-primary/10 text-label-sm font-semibold flex items-center gap-1 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                    <span>Edit Data</span>
+                  </button>
+                  {isAdmin && (
                     <button
                       onClick={() => handleDelete(j)}
                       className="h-8 px-3 rounded-lg border border-error/30 text-error hover:bg-error-container/40 text-label-sm font-semibold flex items-center gap-1 transition-colors"
@@ -570,8 +675,8 @@ function DashboardContent() {
                       <span className="material-symbols-outlined text-[16px]">delete</span>
                       <span>Hapus Berkas</span>
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </article>
             ))}
         </div>
@@ -671,9 +776,10 @@ function DashboardContent() {
                     <td className="px-3.5 py-2 sticky right-0 bg-surface-container-lowest group-hover:bg-surface-container-low z-10 text-center border-l border-outline-variant">
                       <div className="flex items-center justify-center gap-1">
                         <button
-                          disabled
-                          className="p-1 rounded text-outline opacity-40 cursor-not-allowed"
-                          title="Edit berkas"
+                          type="button"
+                          onClick={() => openEdit(j)}
+                          className="p-1 rounded text-outline hover:bg-primary/10 hover:text-primary transition-colors"
+                          title="Edit data"
                         >
                           <span className="material-symbols-outlined text-[18px]">edit</span>
                         </button>
@@ -778,6 +884,83 @@ function DashboardContent() {
           </div>
         </div>
       </section>
+      {editing && editForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-6">
+          <form
+            onSubmit={handleEditSubmit}
+            className="w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-2xl bg-surface-container-lowest p-5 shadow-2xl sm:p-6"
+          >
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-on-surface">Edit Data Jemaah</h2>
+                <p className="mt-1 text-body-sm text-on-surface-variant">{editing.namaLengkap}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setEditing(null); setEditForm(null); }}
+                aria-label="Tutup formulir edit"
+                className="rounded-lg p-2 text-outline hover:bg-surface-container hover:text-on-surface"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {editFields.map(({ key, label, kind, required }) => (
+                <label key={key} className={`flex flex-col gap-1.5 ${kind === "textarea" ? "sm:col-span-2 lg:col-span-3" : ""}`}>
+                  <span className={labelClass}>{label}{required && " *"}</span>
+                  {kind === "select" ? (
+                    <select
+                      required={required}
+                      className={fieldClass}
+                      value={editForm[key]}
+                      onChange={(event) => setEditForm({ ...editForm, [key]: event.target.value })}
+                    >
+                      <option value="">Pilih...</option>
+                      {(key === "jenisKelamin"
+                        ? [{ value: "L", label: "Laki-laki" }, { value: "P", label: "Perempuan" }]
+                        : [{ value: "Belum", label: "Belum" }, { value: "Sudah", label: "Sudah" }]
+                      ).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  ) : kind === "textarea" ? (
+                    <textarea
+                      required={required}
+                      rows={3}
+                      className={`${fieldClass} h-auto py-3`}
+                      value={editForm[key]}
+                      onChange={(event) => setEditForm({ ...editForm, [key]: event.target.value })}
+                    />
+                  ) : (
+                    <input
+                      required={required}
+                      type={kind === "date" ? "date" : "text"}
+                      className={fieldClass}
+                      value={editForm[key]}
+                      onChange={(event) => setEditForm({ ...editForm, [key]: event.target.value })}
+                    />
+                  )}
+                </label>
+              ))}
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={savingEdit}
+                onClick={() => { setEditing(null); setEditForm(null); }}
+                className="btn-liquid-glass-secondary h-11 rounded-xl px-4 font-semibold"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={savingEdit}
+                className="btn-liquid-glass h-11 rounded-xl px-5 font-semibold disabled:opacity-50"
+              >
+                {savingEdit ? "Menyimpan..." : "Simpan Perubahan"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </main>
   );
 }

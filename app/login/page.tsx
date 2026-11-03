@@ -199,10 +199,6 @@ export default function LoginPage() {
         <footer className="w-full py-4 px-6 border-t border-outline-variant/60 bg-surface text-center">
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-on-surface-variant">
             <span>© {new Date().getFullYear()} Kementerian Haji &amp; Umrah Kab. Magetan</span>
-            <span className="text-outline-variant">•</span>
-            <a href="#privacy" className="hover:text-primary transition-colors">
-              Kebijakan Privasi
-            </a>
           </div>
         </footer>
       </div>

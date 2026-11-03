@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import KecamatanChart from "@/components/dashboard/KecamatanChart";
+import Swal from "sweetalert2";
 
 type CountRow = { label: string; total: number };
 
@@ -158,7 +159,11 @@ export default function LaporanPage() {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : "Gagal mengekspor laporan.");
+      await Swal.fire({
+        icon: "error",
+        title: "Gagal mengekspor laporan",
+        text: err instanceof Error ? err.message : "Gagal mengekspor laporan.",
+      });
     } finally {
       setExporting(false);
     }

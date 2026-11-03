@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, FormEvent } from "react";
+import Swal from "sweetalert2";
 
 type Operator = {
   id: string;
@@ -120,15 +121,28 @@ export default function UserManagementPage() {
 
   async function toggleActive(op: Operator) {
     const action = op.is_active ? "menonaktifkan" : "mengaktifkan kembali";
-    if (!window.confirm(`Yakin ingin ${action} akun "${op.username}"?`)) return;
+    const result = await Swal.fire({
+      icon: "question",
+      title: `Yakin ingin ${action} akun ini?`,
+      text: op.username,
+      showCancelButton: true,
+      confirmButtonText: "Ya, lanjutkan",
+      cancelButtonText: "Batal",
+    });
+    if (!result.isConfirmed) return;
     try {
       await api(`/api/operators/${op.id}`, {
         method: "PATCH",
         body: JSON.stringify({ isActive: !op.is_active }),
       });
       await load();
+      await Swal.fire({ icon: "success", title: "Status akun diperbarui", timer: 1500, showConfirmButton: false });
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : "Gagal mengubah status akun.");
+      await Swal.fire({
+        icon: "error",
+        title: "Gagal mengubah status akun",
+        text: err instanceof Error ? err.message : "Gagal mengubah status akun.",
+      });
     }
   }
 

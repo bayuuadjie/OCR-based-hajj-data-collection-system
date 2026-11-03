@@ -13,25 +13,18 @@ type SeedAccount = {
 
 const accounts: SeedAccount[] = [
   {
-    username: "admin",
-    password: "qwertyuiop",
-    name: "Administrator",
+    username: "",
+    password: "",
+    name: "",
     role: "ADMIN",
-    email: "admin@haji.go.id",
+    email: "",
   },
   {
-    username: "operator1",
-    password: "qwertyuiop",
-    name: "Operator 1",
+    username: "",
+    password: "",
+    name: "",
     role: "OPERATOR",
-    email: "operator1@haji.go.id",
-  },
-  {
-    username: "operator2",
-    password: "qwertyuiop",
-    name: "Operator 2",
-    role: "OPERATOR",
-    email: "operator2@haji.go.id",
+    email: "",
   },
 ];
 

@@ -122,7 +122,7 @@ export default function LoginForm() {
         </div>
       </div>
 
-      {/* Ingat saya & lupa password */}
+      {/* Ingat saya */}
       <div className="flex items-center justify-between pt-1 text-label-md">
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <input
@@ -136,12 +136,6 @@ export default function LoginForm() {
             Ingat Saya
           </span>
         </label>
-        <a
-          href="#help"
-          className="text-primary font-semibold hover:underline transition-colors"
-        >
-          Lupa kata sandi?
-        </a>
       </div>
 
       {/* Liquid Glass Submit Button */}
