@@ -66,53 +66,53 @@
 /* ===== Dark Mode Palette (Base: Deep Charcoal/Slate & Glowing #F96A0E) ===== */
 .dark {
   --color-primary: #FA7B23;
-  --color-primary-container: #F96A0E;
+  --color-primary-container: #FA7B23;
   --color-on-primary: #FFFFFF;
   --color-on-primary-container: #FFFFFF;
-  --color-primary-fixed: #3D1800;
-  --color-primary-fixed-dim: #702D00;
+  --color-primary-fixed: #FA7B23;
+  --color-primary-fixed-dim: #FFAA75;
   --color-on-primary-fixed: #FFDBC6;
   --color-on-primary-fixed-variant: #FFAA75;
 
-  --color-secondary: #F59E0B;
-  --color-secondary-container: #3E2405;
+  --color-secondary: #FBBF24;
+  --color-secondary-container: #362007;
   --color-on-secondary: #1F1202;
   --color-on-secondary-container: #FDE68A;
-  --color-secondary-fixed: #452408;
-  --color-secondary-fixed-dim: #2D1603;
+  --color-secondary-fixed: #92400E;
+  --color-secondary-fixed-dim: #F59E0B;
   --color-on-secondary-fixed: #FEF3C7;
   --color-on-secondary-fixed-variant: #FCD34D;
 
   --color-tertiary: #10B981;
   --color-tertiary-container: #064E3B;
-  --color-on-tertiary: #022C22;
+  --color-on-tertiary: #FFFFFF;
   --color-on-tertiary-container: #A7F3D0;
-  --color-tertiary-fixed: #064E3B;
-  --color-tertiary-fixed-dim: #047857;
+  --color-tertiary-fixed: #065F46;
+  --color-tertiary-fixed-dim: #34D399;
   --color-on-tertiary-fixed: #ECFDF5;
   --color-on-tertiary-fixed-variant: #6EE7B7;
 
-  --color-surface: #0E1015;
-  --color-background: #090A0D;
+  --color-surface: #0E121B;
+  --color-background: #090C12;
   --color-on-surface: #F3F4F6;
   --color-on-background: #F3F4F6;
-  --color-on-surface-variant: #9CA3AF;
+  --color-on-surface-variant: #94A3B8;
 
-  --color-surface-container-lowest: #141720;
-  --color-surface-container-low: #181C26;
-  --color-surface-container: #1E2330;
-  --color-surface-container-high: #252B3B;
-  --color-surface-container-highest: #2D3447;
-  --color-surface-variant: #1B202D;
-  --color-surface-bright: #283042;
-  --color-surface-dim: #10131A;
+  --color-surface-container-lowest: #141A26;
+  --color-surface-container-low: #0F131D;
+  --color-surface-container: #1A2232;
+  --color-surface-container-high: #222B3D;
+  --color-surface-container-highest: #2A354A;
+  --color-surface-variant: #192030;
+  --color-surface-bright: #263147;
+  --color-surface-dim: #090C12;
 
   --color-inverse-surface: #E5E7EB;
   --color-inverse-on-surface: #111827;
   --color-inverse-primary: #B34400;
 
-  --color-outline: #6B7280;
-  --color-outline-variant: #252B3B;
+  --color-outline: #64748B;
+  --color-outline-variant: #222B3D;
   --color-surface-tint: #FA7B23;
 
   --color-error: #EF4444;
@@ -120,7 +120,7 @@
   --color-on-error: #FFFFFF;
   --color-on-error-container: #FCA5A5;
 
-  --watermark-line: rgba(249, 106, 14, 0.04);
+  --watermark-line: rgba(250, 123, 35, 0.04);
   color-scheme: dark;
 }
 
@@ -299,4 +299,16 @@
   background: rgba(156, 163, 175, 0.65);
   border: 2px solid transparent;
   background-clip: padding-box;
+}
+
+.dark .dashboard-scroll {
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+
+.dark .dashboard-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+}
+
+.dark .dashboard-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(250, 123, 35, 0.7);
 }

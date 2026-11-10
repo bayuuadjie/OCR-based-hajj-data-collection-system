@@ -160,7 +160,7 @@ export default function LoginPage() {
             {/* Header Form */}
             <div className="text-center mb-6">
               <div className="inline-block relative mb-3">
-                <div className="w-18 h-18 p-1.5 rounded-2xl bg-gradient-to-br from-[#FFE4D0] to-[#FFD0B0] dark:from-[#3D1800] dark:to-[#251000] border border-primary/20 shadow-md">
+                <div className="w-18 h-18 p-1.5 rounded-2xl bg-gradient-to-br from-[#FFE4D0] to-[#FFD0B0] dark:from-primary/25 dark:to-primary/10 border border-primary/20 shadow-md">
                   <img
                     src="/assets/logo.png"
                     alt="Logo Garuda Kementerian Haji dan Umrah"

@@ -341,7 +341,7 @@ function DashboardContent() {
   const emptyText = "Tidak ada berkas yang cocok dengan filter.";
 
   return (
-    <main className="dashboard-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain bg-surface-container-low p-3 sm:p-5 md:p-6 flex flex-col gap-4 sm:gap-6">
+    <main className="dashboard-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain bg-surface-container-low p-3 sm:p-5 md:p-6 pb-24 sm:pb-32 md:pb-36 flex flex-col gap-4 sm:gap-6">
       {/* ===================================================================
           1. HEADER SECTION & ACTION BUTTONS
           =================================================================== */}
@@ -737,7 +737,7 @@ function DashboardContent() {
                     key={j.id}
                     className="h-12 hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors duration-100 group"
                   >
-                    <td className="px-3.5 text-center sticky left-0 bg-surface-container-lowest group-hover:bg-surface-container-low z-10 text-outline border-r border-outline-variant font-mono text-[11px]">
+                    <td className="px-3.5 text-center sticky left-0 bg-surface-container-lowest group-hover:bg-surface-container-low dark:group-hover:bg-surface-container z-10 text-outline border-r border-outline-variant font-mono text-[11px]">
                       {(page - 1) * limit + i + 1}
                     </td>
                     <td className="px-3.5 py-2 font-semibold text-on-surface">{j.namaLengkap}</td>
@@ -757,8 +757,8 @@ function DashboardContent() {
                         <span
                           className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold ${
                             j.jenisKelamin === "L"
-                              ? "bg-primary/10 text-primary"
-                              : "bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300"
+                              ? "bg-primary/10 text-primary border border-primary/20"
+                              : "bg-pink-50 text-pink-700 border border-pink-200 dark:bg-pink-500/15 dark:text-pink-300 dark:border-pink-500/30"
                           }`}
                         >
                           {j.jenisKelamin}
@@ -773,7 +773,7 @@ function DashboardContent() {
                     <td className="px-3.5 py-2 font-mono font-semibold text-on-surface">{dash(j.noPorsi)}</td>
                     <td className="px-3.5 py-2 text-on-surface-variant">{dash(j.tanggalValidasi)}</td>
                     <td className="px-3.5 py-2 text-on-surface-variant">{dash(j.tanggalPorsi)}</td>
-                    <td className="px-3.5 py-2 sticky right-0 bg-surface-container-lowest group-hover:bg-surface-container-low z-10 text-center border-l border-outline-variant">
+                    <td className="px-3.5 py-2 sticky right-0 bg-surface-container-lowest group-hover:bg-surface-container-low dark:group-hover:bg-surface-container z-10 text-center border-l border-outline-variant">
                       <div className="flex items-center justify-center gap-1">
                         <button
                           type="button"
@@ -884,6 +884,9 @@ function DashboardContent() {
           </div>
         </div>
       </section>
+
+      {/* Ruang kosong di bagian bawah agar data dashboard tidak terpotong saat di-scroll */}
+      <div className="h-16 sm:h-24 shrink-0 pointer-events-none" aria-hidden="true" />
       {editing && editForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-6">
           <form

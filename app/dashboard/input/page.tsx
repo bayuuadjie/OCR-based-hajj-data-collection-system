@@ -392,7 +392,7 @@ export default function InputDataPage() {
   }
 
   return (
-    <main className="flex-1 overflow-y-auto bg-surface-container-low p-gutter-sm sm:p-gutter flex flex-col gap-space-lg">
+    <main className="dashboard-scroll flex-1 overflow-y-auto bg-surface-container-low p-gutter-sm sm:p-gutter pb-24 sm:pb-32 flex flex-col gap-space-lg">
       <section>
         <h1 className="text-headline-md sm:text-headline-lg font-headline-lg text-on-surface">Input Data Baru</h1>
         <p className="text-body-sm font-body-sm text-on-surface-variant mt-1">
@@ -733,6 +733,9 @@ export default function InputDataPage() {
           </button>
         )}
       </div>
+
+      {/* Ruang kosong di bagian bawah agar data dashboard tidak terpotong saat di-scroll */}
+      <div className="h-16 sm:h-24 shrink-0 pointer-events-none" aria-hidden="true" />
     </main>
   );
 }
