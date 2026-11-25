@@ -291,6 +291,12 @@
   scrollbar-color: rgba(156, 163, 175, 0.65) transparent;
 }
 
+/* Saat flex column kehabisan tinggi, konten tidak boleh ikut menyusut.
+   Yang digulir harus <main>, bukan contennya yang terpotong. */
+.dashboard-scroll > * {
+  flex-shrink: 0;
+}
+
 .dashboard-scroll::-webkit-scrollbar {
   width: 10px;
 }

@@ -204,7 +204,7 @@ export default function PengaturanPage() {
   const pwType = showPw ? "text" : "password";
 
   return (
-    <main className="dashboard-scroll flex-1 overflow-y-auto bg-surface-container-low p-gutter-sm sm:p-gutter pb-24 sm:pb-32 flex flex-col gap-space-lg">
+    <main className="dashboard-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain bg-surface-container-low p-gutter-sm sm:p-gutter pb-24 sm:pb-32 flex flex-col gap-space-lg">
       <section>
         <h1 className="text-headline-md sm:text-headline-lg font-headline-lg text-on-surface">Pengaturan</h1>
         <p className="text-body-sm font-body-sm text-on-surface-variant mt-1">Kelola profil, keamanan akun, dan tampilan.</p>

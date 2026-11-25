@@ -174,7 +174,7 @@ export default function LaporanPage() {
   const maxKec = Math.max(1, ...(data?.perKecamatan.map((k) => k.total) ?? [0]));
 
   return (
-    <main className="dashboard-scroll flex-1 overflow-y-auto bg-surface-container-low p-gutter-sm sm:p-gutter pb-24 sm:pb-32 flex flex-col gap-space-lg">
+    <main className="dashboard-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain bg-surface-container-low p-gutter-sm sm:p-gutter pb-24 sm:pb-32 flex flex-col gap-space-lg">
       <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-base">
         <div>
           <h1 className="text-headline-md sm:text-headline-lg font-headline-lg text-on-surface">

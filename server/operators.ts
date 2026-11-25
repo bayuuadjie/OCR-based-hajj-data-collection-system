@@ -12,6 +12,13 @@ declare module "express-serve-static-core" {
 
 const router = Router();
 
+/** Bedakan duplikat username dan email agar pesan 409 tidak menyesatkan. */
+function duplicateMessage(err: any): string {
+  if (err?.constraint === "operators_username_key") return "Username sudah dipakai akun lain.";
+  if (err?.constraint === "operators_email_key") return "Email sudah dipakai akun lain.";
+  return "Username atau email sudah dipakai.";
+}
+
 /** Wajib login + role ADMIN + akun masih aktif di database. */
 async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const token = req.cookies?.[SESSION_COOKIE_NAME];
@@ -42,13 +49,15 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction) {
 
 router.use(requireAdmin);
 
-// Daftar semua akun
+// Daftar semua akun (akun baru tampil di paling atas)
 router.get("/", async (_req, res) => {
+  // Daftar akun harus selalu segar; jangan sampai browser menyimpan respons lama.
+  res.set("Cache-Control", "no-store, max-age=0");
   try {
     const result = await pool.query(
       `SELECT id, username, email, name, role, is_active, created_at
        FROM operators
-       ORDER BY created_at ASC`
+       ORDER BY created_at DESC, id ASC`
     );
     res.json({ operators: result.rows });
   } catch (err) {
@@ -78,15 +87,16 @@ router.post("/", async (req, res) => {
 
   try {
     const passwordHash = await bcrypt.hash(String(password), 12);
-    await pool.query(
+    const result = await pool.query(
       `INSERT INTO operators (id, username, email, name, password_hash, role)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, username, email, name, role, is_active, created_at`,
       [randomUUID(), username, email || null, name, passwordHash, role === "ADMIN" ? "ADMIN" : "OPERATOR"]
     );
-    res.status(201).json({ message: "Akun berhasil dibuat." });
+    res.status(201).json({ message: "Akun berhasil dibuat.", operator: result.rows[0] });
   } catch (err: any) {
     if (err?.code === "23505") {
-      return res.status(409).json({ message: "Username atau email sudah dipakai." });
+      return res.status(409).json({ message: duplicateMessage(err) });
     }
     console.error(err);
     res.status(500).json({ message: "Gagal membuat akun." });
@@ -145,16 +155,17 @@ router.patch("/:id", async (req, res) => {
 
   try {
     const result = await pool.query(
-      `UPDATE operators SET ${sets.join(", ")} WHERE id = $${values.length}`,
+      `UPDATE operators SET ${sets.join(", ")} WHERE id = $${values.length}
+       RETURNING id, username, email, name, role, is_active, created_at`,
       values
     );
     if (result.rowCount === 0) {
       return res.status(404).json({ message: "Akun tidak ditemukan." });
     }
-    res.json({ message: "Akun berhasil diperbarui." });
+    res.json({ message: "Akun berhasil diperbarui.", operator: result.rows[0] });
   } catch (err: any) {
     if (err?.code === "23505") {
-      return res.status(409).json({ message: "Email sudah dipakai akun lain." });
+      return res.status(409).json({ message: duplicateMessage(err) });
     }
     console.error(err);
     res.status(500).json({ message: "Gagal memperbarui akun." });

@@ -27,6 +27,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     credentials: "include",
     headers: { "Content-Type": "application/json" },
+    cache: "no-store",
     ...init,
   });
   const data = await res.json().catch(() => null);
@@ -49,23 +50,38 @@ export default function UserManagementPage() {
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
-    try {
-      const [list, me] = await Promise.all([
-        api<{ operators: Operator[] }>("/api/operators"),
-        api<{ user: { username: string } }>("/api/auth/me"),
-      ]);
-      setOperators(list.operators);
-      setMeUsername(me.user.username);
+    setLoading(true);
+    // Jangan biarkan kegagalan /api/auth/me menghalangi pembaruan daftar user.
+    const [list, me] = await Promise.allSettled([
+      api<{ operators: Operator[] }>(`/api/operators?t=${Date.now()}`),
+      api<{ user: { username: string } }>("/api/auth/me"),
+    ]);
+
+    if (list.status === "fulfilled") {
+      setOperators(list.value.operators);
       setPageError(null);
-    } catch (err) {
-      setPageError(err instanceof Error ? err.message : "Gagal memuat data.");
-    } finally {
-      setLoading(false);
+    } else {
+      setPageError(
+        list.reason instanceof Error ? list.reason.message : "Gagal memuat data akun."
+      );
     }
+    if (me.status === "fulfilled") setMeUsername(me.value.user.username);
+    setLoading(false);
   }, []);
 
   useEffect(() => {
-    load();
+    void load();
+    // Tab yang dibuka lama ikut menyegarkan daftar saat kembali dibuka.
+    const refresh = () => void load();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [load]);
 
   function openCreate() {
@@ -94,10 +110,12 @@ export default function UserManagementPage() {
 
     try {
       if (modal.mode === "create") {
-        await api("/api/operators", {
+        const created = await api<{ message: string; operator: Operator }>("/api/operators", {
           method: "POST",
           body: JSON.stringify(form),
         });
+        // Tampilkan langsung hasil simpan, tidak bergantung pada fetch ulang.
+        setOperators((prev) => [created.operator, ...prev]);
       } else {
         const body: Record<string, unknown> = {
           name: form.name,
@@ -105,10 +123,16 @@ export default function UserManagementPage() {
           role: form.role,
         };
         if (form.password) body.password = form.password;
-        await api(`/api/operators/${modal.id}`, {
-          method: "PATCH",
-          body: JSON.stringify(body),
-        });
+        const updated = await api<{ message: string; operator: Operator }>(
+          `/api/operators/${modal.id}`,
+          {
+            method: "PATCH",
+            body: JSON.stringify(body),
+          }
+        );
+        setOperators((prev) =>
+          prev.map((op) => (op.id === modal.id ? updated.operator : op))
+        );
       }
       setModal(null);
       await load();
@@ -131,10 +155,14 @@ export default function UserManagementPage() {
     });
     if (!result.isConfirmed) return;
     try {
-      await api(`/api/operators/${op.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ isActive: !op.is_active }),
-      });
+      const updated = await api<{ message: string; operator: Operator }>(
+        `/api/operators/${op.id}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ isActive: !op.is_active }),
+        }
+      );
+      setOperators((prev) => prev.map((item) => (item.id === op.id ? updated.operator : item)));
       await load();
       await Swal.fire({ icon: "success", title: "Status akun diperbarui", timer: 1500, showConfirmButton: false });
     } catch (err) {
@@ -147,7 +175,7 @@ export default function UserManagementPage() {
   }
 
   return (
-    <main className="dashboard-scroll flex-1 overflow-y-auto bg-surface-container-low p-gutter-sm sm:p-gutter pb-24 sm:pb-32 flex flex-col gap-space-lg">
+    <main className="dashboard-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain bg-surface-container-low p-gutter-sm sm:p-gutter pb-24 sm:pb-32 flex flex-col gap-space-lg">
       <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-base">
         <div>
           <h1 className="text-headline-lg font-headline-lg text-on-surface">Manajemen Pengguna</h1>
@@ -155,13 +183,23 @@ export default function UserManagementPage() {
             Kelola akun staf dan operator yang bisa masuk ke sistem.
           </p>
         </div>
-        <button
-          onClick={openCreate}
-          className="btn-liquid-glass h-11 px-5 rounded-xl font-semibold text-label-md flex items-center gap-2 shadow-md cursor-pointer self-start sm:self-auto"
-        >
-          <span className="material-symbols-outlined text-[20px]">person_add</span>
-          <span>Tambah Akun</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={() => void load()}
+            className="btn-liquid-glass-secondary h-11 w-11 rounded-xl flex items-center justify-center cursor-pointer"
+            title="Muat ulang daftar akun"
+            aria-label="Muat ulang daftar akun"
+          >
+            <span className="material-symbols-outlined text-[20px]">refresh</span>
+          </button>
+          <button
+            onClick={openCreate}
+            className="btn-liquid-glass h-11 px-5 rounded-xl font-semibold text-label-md flex items-center gap-2 shadow-md cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[20px]">person_add</span>
+            <span>Tambah Akun</span>
+          </button>
+        </div>
       </section>
 
       <section className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm overflow-hidden">
